@@ -1,0 +1,15 @@
+# Blueprint do Render: "New +" > "Blueprint" e aponte para este repositório.
+services:
+  - type: web
+    name: dragon-arena
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL        # cole aqui a URL do Postgres (veja o README); sem ela os dados ficam em arquivo e SÃO PERDIDOS a cada deploy
+        sync: false

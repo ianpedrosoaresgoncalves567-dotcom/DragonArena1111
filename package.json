@@ -1,0 +1,15 @@
+{
+  "name": "dragon-arena-online",
+  "version": "0.7.0",
+  "private": true,
+  "description": "Dragon Arena — servidor online com contas, matchmaking e partidas ranqueadas",
+  "main": "server/index.js",
+  "scripts": {
+    "build": "python3 build.py",
+    "start": "node server/index.js",
+    "test": "node test/run.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" },
+  "optionalDependencies": { "pg": "^8.12.0" }
+}
