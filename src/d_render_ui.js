@@ -487,7 +487,7 @@ const Game = {
     this.profile = Save.load();
     Input.init(); Renderer.init(); Preview.init(); UI.init(); Sound.init();
     if (this.profile.character) UI.setSel(this.profile.character, this.profile.difficulty, this.profile.mode); else { UI.refresh(); }
-    UI.refreshProfile(); this.bind(); Online.init(); this.fit(); window.addEventListener("resize", () => this.fit());
+    UI.refreshProfile(); this.bind(); Online.init(); PWA.init(); this.fit(); window.addEventListener("resize", () => this.fit());
     Preview.start();
   },
   inBattle() { return !!this.match && !$("battle").classList.contains("hidden"); },

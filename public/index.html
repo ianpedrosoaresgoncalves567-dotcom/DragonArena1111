@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dragon Arena — Versão 0.7</title>
+<meta name="theme-color" content="#0b1020">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dragon Arena"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<title>Dragon Arena — Versão 0.8</title>
 <style>
 :root{--bg:#0b1020;--panel:#151d32;--panel2:#202b45;--text:#eef4ff;--muted:#9fb0cf;--cyan:#55e6ff;--gold:#ffce63;--red:#ff5f75;--green:#6cf0a5;--line:#2e4268}
 *{box-sizing:border-box}
@@ -144,8 +147,8 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
 <body>
 <div class="wrap">
   <header class="top">
-    <div><div class="logo">DRAGON <span>ARENA</span></div><div class="tag">LUTA 2D EM PIXEL ART · VERSÃO 0.7</div></div>
-    <div class="row"><button id="muteBtn" type="button" aria-label="Silenciar" title="Silenciar (M)" style="padding:4px 10px">🔊</button><span class="pill">OFFLINE</span><span class="pill">PIXEL ART PROCEDURAL</span><span class="pill">BUILD 0.7</span></div>
+    <div><div class="logo">DRAGON <span>ARENA</span></div><div class="tag">LUTA 2D EM PIXEL ART · VERSÃO 0.8</div></div>
+    <div class="row"><button id="installBtn" type="button" class="hidden" style="padding:4px 10px">📲 Instalar app</button><button id="muteBtn" type="button" aria-label="Silenciar" title="Silenciar (M)" style="padding:4px 10px">🔊</button><span class="pill">OFFLINE</span><span class="pill">PIXEL ART PROCEDURAL</span><span class="pill">BUILD 0.8</span></div>
   </header>
 
   <section id="menu" class="menu">
@@ -289,7 +292,7 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
     </div>
     <div class="log" id="battleLog">A luta vai começar!</div>
   </section>
-  <div class="footer">DRAGON ARENA 0.7 · Jogo de luta 2D original · Nenhum recurso externo necessário</div>
+  <div class="footer">DRAGON ARENA 0.8 · Jogo de luta 2D original · Nenhum recurso externo necessário</div>
 </div>
 <script>
 "use strict";
@@ -1828,6 +1831,24 @@ const Online = {
   }
 };
 
+/* ---------- App instalável (PWA): service worker + botão "Instalar app" ---------- */
+const PWA = {
+  deferred: null,
+  init() {
+    if (!/^https?:$/.test(location.protocol)) return;                       // só quando servido por http(s)
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => { });
+    const btn = $("installBtn");
+    window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); this.deferred = e; btn.classList.remove("hidden"); });
+    window.addEventListener("appinstalled", () => { this.deferred = null; btn.classList.add("hidden"); });
+    btn.addEventListener("click", async () => {
+      if (this.deferred) { this.deferred.prompt(); try { await this.deferred.userChoice; } catch (e) { } this.deferred = null; btn.classList.add("hidden"); }
+      else alert("No iPhone/iPad: toque em Compartilhar e depois em \"Adicionar à Tela de Início\".");
+    });
+    const standalone = window.matchMedia && matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) btn.classList.remove("hidden");   // iOS não dispara beforeinstallprompt
+  }
+};
+
 /* ---------- Renderização ---------- */
 const Renderer = {
   canvas: null, ctx: null, layers: {}, glowCache: {}, vignette: null,
@@ -2316,7 +2337,7 @@ const Game = {
     this.profile = Save.load();
     Input.init(); Renderer.init(); Preview.init(); UI.init(); Sound.init();
     if (this.profile.character) UI.setSel(this.profile.character, this.profile.difficulty, this.profile.mode); else { UI.refresh(); }
-    UI.refreshProfile(); this.bind(); Online.init(); this.fit(); window.addEventListener("resize", () => this.fit());
+    UI.refreshProfile(); this.bind(); Online.init(); PWA.init(); this.fit(); window.addEventListener("resize", () => this.fit());
     Preview.start();
   },
   inBattle() { return !!this.match && !$("battle").classList.contains("hidden"); },

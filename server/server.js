@@ -47,6 +47,15 @@ function createServer(opts) {
   /* ---------- HTTP ---------- */
   let indexHtml = null;
   const loadIndex = () => { try { indexHtml = fs.readFileSync(path.join(publicDir, "index.html")); } catch (e) { indexHtml = null; } };
+  const statics = new Map();
+  function staticFile(url) {                                              // só arquivos conhecidos do PWA (sem navegar em pastas)
+    const known = url === "/manifest.webmanifest" || url === "/sw.js" || /^\/icons\/[a-z0-9-]+\.png$/.test(url); if (!known) return null;
+    if (!statics.has(url)) { try { statics.set(url, fs.readFileSync(path.join(publicDir, url.slice(1)))); } catch (e) { return null; } }
+    const body = statics.get(url);
+    if (url === "/sw.js") return { body, type: "text/javascript; charset=utf-8", cache: "no-cache", extra: { "Service-Worker-Allowed": "/" } };
+    if (url === "/manifest.webmanifest") return { body, type: "application/manifest+json; charset=utf-8", cache: "no-cache" };
+    return { body, type: "image/png", cache: "public, max-age=86400" };
+  }
   httpServer = http.createServer(async (req, res) => {
     const url = (req.url || "/").split("?")[0];
     const hdr = { "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
@@ -57,6 +66,8 @@ function createServer(opts) {
       }
       if (url === "/health") { res.writeHead(200, Object.assign({ "Content-Type": "application/json" }, hdr)); return res.end(JSON.stringify(Object.assign({ ok: true, v: NET_VERSION, storage: storage.kind }, stats()))); }
       if (url === "/api/leaderboard") { res.writeHead(200, Object.assign({ "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=5" }, hdr)); return res.end(JSON.stringify(await leaderboard())); }
+      const st = staticFile(url);
+      if (st) { res.writeHead(200, Object.assign({ "Content-Type": st.type, "Cache-Control": st.cache }, st.extra || {}, hdr)); return res.end(st.body); }
       res.writeHead(404, hdr); res.end("Não encontrado");
     } catch (e) { res.writeHead(500, hdr); res.end("Erro"); }
   });

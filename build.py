@@ -4,11 +4,14 @@ import os, re
 root = os.path.dirname(os.path.abspath(__file__)); d = os.path.join(root, 'src') + '/'
 rd = lambda f: open(d + f, encoding='utf-8').read()
 
-CLIENT = ['a_data.js', 'a1_palette.js', 'a3_arenas.js', 'a2_sound.js', 'b_fx_sprites.js', 'c_combat.js', 'f_online.js', 'd_render_ui.js']
+CLIENT = ['a_data.js', 'a1_palette.js', 'a3_arenas.js', 'a2_sound.js', 'b_fx_sprites.js', 'c_combat.js', 'f_online.js', 'g_pwa.js', 'd_render_ui.js']
 js = ''.join(rd(f) for f in CLIENT)
 html = rd('template.html').replace('/*__SCRIPT__*/', js)
 os.makedirs(os.path.join(root, 'public'), exist_ok=True)
 open(os.path.join(root, 'public', 'index.html'), 'w', encoding='utf-8').write(html)
+import hashlib
+ver = hashlib.sha1((html + ''.join(open(os.path.join(root, 'public', f), 'rb').read().hex() for f in ['manifest.webmanifest'])).encode()).hexdigest()[:10]
+open(os.path.join(root, 'public', 'sw.js'), 'w', encoding='utf-8').write(rd('sw.template.js').replace('__VERSION__', ver))
 open(os.path.join(root, 'game.client.js'), 'w', encoding='utf-8').write(js)   # só para `node --check`
 
 # --- servidor: mesmos módulos de dados e combate, com FX/Sound/UI substituídos por stubs que registram eventos

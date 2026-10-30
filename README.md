@@ -60,10 +60,16 @@ Abra `http://localhost:3000` em duas abas (ou dois aparelhos na mesma rede), cri
 | `ALLOWED_ORIGINS` | lista (separada por vírgulas) de origens aceitas no WebSocket, ex.: `https://seu-app.onrender.com,https://seuusuario.github.io`. Vazio = qualquer uma |
 | `PGSSL=disable` | desliga SSL na conexão com o Postgres (só para bancos locais) |
 
+## Instalar como app (PWA)
+
+Ao abrir o link no celular ou no computador, aparece o botão **📲 Instalar app** (no iPhone: *Compartilhar → Adicionar à Tela de Início*). O jogo ganha ícone, abre em tela cheia sem barra de endereço e o **modo offline funciona sem internet**. O service worker abre a cópia guardada se o servidor demorar mais de 2,5 s (útil com o plano gratuito "dormindo") e baixa a versão nova sozinho quando há atualização.
+
+**APK para Android:** com o jogo no ar e o PWA funcionando, gere o APK em [pwabuilder.com](https://www.pwabuilder.com) colocando o endereço do seu serviço (escolha *Android*). Para distribuir fora da Play Store basta enviar o `.apk`; para publicar na loja há taxa única do Google.
+
 ## Desenvolvimento
 
 * O código do jogo fica em `src/` (módulos). `python3 build.py` gera `public/index.html` (cliente) e `server/sim.js` (simulação do servidor, com FX/Som/UI trocados por *stubs* que registram eventos). **Edite `src/`, nunca os arquivos gerados**, e rode o build antes de commitar.
-* Testes: `npm test` (pontuação + servidor com clientes WebSocket reais: cadastro, login, fila, luta completa, abandono, reconexão, matchmaking). `node test/e2e.js` abre dois navegadores reais (precisa do Playwright instalado).
+* Testes: `npm test` (pontuação + servidor com clientes WebSocket reais: cadastro, login, fila, luta completa, abandono, reconexão, matchmaking). `node test/e2e.js` (dois navegadores jogando um contra o outro) e `node test/pwa.js` (manifesto, service worker e modo offline) usam o Playwright, que precisa estar instalado.
 
 ## Limitações conhecidas
 * Sem previsão/rollback de rede: a ação aparece depois de ~1 viagem de ida e volta ao servidor. Funciona bem com ping até ~120 ms; acima disso o controle fica "pesado".
