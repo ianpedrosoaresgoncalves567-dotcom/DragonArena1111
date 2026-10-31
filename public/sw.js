@@ -1,6 +1,6 @@
 "use strict";
 /* Service worker gerado por build.py (a versão muda a cada build, então atualizações chegam sozinhas). */
-const VERSION = "f8409611ea", CACHE = "dragon-arena-" + VERSION;
+const VERSION = "b08fbeb35a", CACHE = "dragon-arena-" + VERSION;
 const SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-512.png", "/icons/apple-touch-icon.png", "/icons/favicon-48.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("dragon-arena-") && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

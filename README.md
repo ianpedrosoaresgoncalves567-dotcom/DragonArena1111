@@ -34,6 +34,20 @@ Garantias: vencer rende no mínimo **+5**; perder custa no mínimo −2 e no má
 
 Faixas (cada uma, exceto Lenda, tem divisões III → II → I): Bronze · Prata (1150) · Ouro (1300) · Platina (1450) · Diamante (1600) · Mestre (1750) · Lenda (1950). Todo mundo começa com 1000 (Bronze II). Ajuste tudo em `server/rating.js`.
 
+## Raças e poderes (v0.9)
+
+* **12 raças** (4 originais + Glacial, Víbora, Trovão, Pétreo, Zéfiro, Sanguis, Astral, Dracônico), cada uma com passiva e **poder exclusivo** (tecla `H`).
+* **19 poderes equipáveis**: na aba ⚡ Poderes escolha 2 (teclas `1`/`2` ou `;`/`'`; botões "Poder 1/2" no celular). Valem no offline e no ranqueado (o servidor valida a lista e descarta poderes inválidos/exclusivos/duplicados).
+* Como adicionar: poderes em `src/a4_powers.js` (`defPower("id", { name, icon, cost, cd, startup, end, text, tag, fire(f, m) {...} })`); raças em `src/a5_races.js` (`mkRace`). Rode `python3 build.py` e `node test/powers.js`.
+* O protocolo online mudou (`NET_VERSION` 2): clientes antigos em cache precisam recarregar (o app atualiza sozinho pelo service worker).
+
+## Antes de abrir ao público
+
+* Redefina a senha do banco se ela já apareceu em print/chat e atualize `DATABASE_URL` no Render.
+* Plano gratuito do Render: o servidor dorme sem uso; o jogo avisa "acordando" na primeira conexão.
+* Limites no servidor: cadastros por IP, tentativas de login, mensagens por segundo e (novo) no máximo `MAX_CONN_PER_IP` conexões simultâneas por IP (padrão 12).
+* Fila vazia: após 20 s o jogo oferece "Treinar contra o computador".
+
 ## Rodar no seu computador
 
 ```bash
@@ -69,7 +83,7 @@ Ao abrir o link no celular ou no computador, aparece o botão **📲 Instalar ap
 ## Desenvolvimento
 
 * O código do jogo fica em `src/` (módulos). `python3 build.py` gera `public/index.html` (cliente) e `server/sim.js` (simulação do servidor, com FX/Som/UI trocados por *stubs* que registram eventos). **Edite `src/`, nunca os arquivos gerados**, e rode o build antes de commitar.
-* Testes: `npm test` (pontuação + servidor com clientes WebSocket reais: cadastro, login, fila, luta completa, abandono, reconexão, matchmaking). `node test/e2e.js` (dois navegadores jogando um contra o outro) e `node test/pwa.js` (manifesto, service worker e modo offline) usam o Playwright, que precisa estar instalado.
+* Testes: `node test/powers.js` (IA x IA em todas as raças + cada poder), `node test/ui_powers.js` (aba Poderes/HUD, precisa do Playwright), `npm test` (pontuação + servidor com clientes WebSocket reais: cadastro, login, fila, luta completa, abandono, reconexão, matchmaking). `node test/e2e.js` (dois navegadores jogando um contra o outro) e `node test/pwa.js` (manifesto, service worker e modo offline) usam o Playwright, que precisa estar instalado.
 
 ## Limitações conhecidas
 * Sem previsão/rollback de rede: a ação aparece depois de ~1 viagem de ida e volta ao servidor. Funciona bem com ping até ~120 ms; acima disso o controle fica "pesado".

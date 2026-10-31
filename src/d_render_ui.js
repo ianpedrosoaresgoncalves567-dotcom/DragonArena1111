@@ -160,6 +160,9 @@ const Renderer = {
       ctx.fillStyle = "#efe6c4"; for (let i = 0; i < 28; i++) { const an = i / 28 * 6.283; ctx.fillRect(R(f.x + Math.cos(an) * 13), R(f.y - 20 + Math.sin(an) * 23), 1, 1); } ctx.restore();
     }
     if (f.burn && Math.random() < .3) FX.ember(f.x, f.y - 20, "#ff9a3c", 1);
+    if (f.poison && Math.random() < .2) FX.ember(f.x, f.y - 20, "#9bff5a", 1);
+    if (f.shield > 0 && !f.ko) { ctx.save(); ctx.globalAlpha = .2 + Math.sin(time * 9) * .05; this.fillEllipseRows(ctx, R(f.x), R(f.y - 20), 12, 22, "#8fd0ff"); ctx.restore(); }
+    if (!f.ko) { let i = 0; for (const k in f.st) if (f.st[k] > 0 && STATUS_INFO[k]) { ctx.fillStyle = STATUS_INFO[k].color; ctx.fillRect(R(f.x) - 6 + i * 4, R(f.y) - 42, 3, 3); i++; } }
     if (f.guarding) {                                                                      // escudo de defesa
       ctx.save(); ctx.globalAlpha = f.guardT < CFG.PARRY_WINDOW ? .95 : .5; ctx.fillStyle = f.guardT < CFG.PARRY_WINDOW ? "#ffffff" : "#9fe8ff";
       for (let i = 0; i <= 16; i++) { const an = -1.1 + i / 16 * 2.2; ctx.fillRect(R(f.x + f.face * (5 + Math.cos(an) * 14)), R(f.y - 20 + Math.sin(an) * 17), 1, 2); }
@@ -239,7 +242,7 @@ const Preview = {
     if (n[0] === "a") { const s = +n[1]; f.act = { type: "attack", step: s, air: false, mv: MOVES[s - 1], k: 1 / f.stats.mods.atkSpeed, t: 0, hit: false }; }
     else if (n === "blast") f.act = { type: "blast", t: 0, startup: .13, recovery: .3, fired: false };
     else if (n === "awaken") f.act = { type: "awaken", t: 0, dur: .45, done: false };
-    else if (n === "skill") { const k = f.race.skill.kind; f.act = { type: "skill", kind: k, t: 0, hit: false, startup: k === "beam" ? .45 : .28, vanish: .14, end: k === "armor" ? .4 : k === "beam" ? .75 : .6, fired: false }; }
+    else if (n === "skill") { const k = f.race.skill.kind, sk = f.race.skill; if (k === "cast") f.act = { type: "skill", kind: k, pose: sk.pose || "blast", t: 0, hit: false, startup: sk.startup, end: sk.end, pid: sk.id, fired: true }; else f.act = { type: "skill", kind: k, t: 0, hit: false, startup: k === "beam" ? .45 : .28, vanish: .14, end: k === "armor" ? .4 : k === "beam" ? .75 : .6, fired: false }; }
   },
   start() { if (!this.raf) { this.last = 0; this.raf = requestAnimationFrame(t => this.loop(t)); } },
   stop() { cancelAnimationFrame(this.raf); this.raf = 0; },
@@ -261,9 +264,10 @@ const Preview = {
 
 /* ---------- Interface ---------- */
 const UI = {
-  sel: { name: "Guerreiro", raceKey: "ignar", clanKey: "chama", outfit: RACES.ignar.defaults.outfit, hair: RACES.ignar.defaults.hair, aura: RACES.ignar.defaults.aura, accessory: "none", body: BODY.defaults(), difficulty: "normal", mode: "quick" },
-  touched: { outfit: false, hair: false, aura: false }, cache: {}, bt: 0, prev: { blast: 0, dash: 0, awaken: 0, race: 0 },
+  sel: { name: "Guerreiro", raceKey: "ignar", clanKey: "chama", outfit: RACES.ignar.defaults.outfit, hair: RACES.ignar.defaults.hair, aura: RACES.ignar.defaults.aura, accessory: "none", body: BODY.defaults(), powers: ["", ""], slot: 0, difficulty: "normal", mode: "quick" },
+  touched: { outfit: false, hair: false, aura: false }, cache: {}, bt: 0, prev: { blast: 0, dash: 0, awaken: 0, race: 0, p1: 0, p2: 0 },
   init() {
+    this.buildPowers();
     const rl = $("raceList"), cl = $("clanList");
     for (const k in RACES) { const r = RACES[k], b = document.createElement("button"); b.type = "button"; b.className = "choice"; b.dataset.key = k; b.setAttribute("role", "radio"); b.innerHTML = "<b>" + r.icon + " " + r.name + "</b><span>" + r.role + "</span>"; b.addEventListener("click", () => this.pickRace(k)); rl.appendChild(b); }
     for (const k in CLANS) { const c = CLANS[k], b = document.createElement("button"); b.type = "button"; b.className = "choice"; b.dataset.key = k; b.setAttribute("role", "radio"); b.innerHTML = "<b>" + c.icon + " " + c.name.replace("Clã d", "D") + "</b><span>" + c.short + "</span>"; b.addEventListener("click", () => { this.sel.clanKey = k; this.refresh(); }); cl.appendChild(b); }
@@ -278,7 +282,7 @@ const UI = {
     $("difficulty").addEventListener("change", e => { this.sel.difficulty = e.target.value === "hard" ? "hard" : "normal"; });
   },
   /* ---- abas do menu ---- */
-  TABS: ["match", "online", "char", "colors", "body", "shop", "help"], tab: "match",
+  TABS: ["match", "online", "char", "powers", "colors", "body", "shop", "help"], tab: "match",
   initTabs() {
     const btns = [...document.querySelectorAll(".tabs [role=tab]")];
     btns.forEach((b, i) => {
@@ -343,13 +347,35 @@ const UI = {
     inp.addEventListener("input", e => { if (Save.isColor(e.target.value)) { this.sel[key] = e.target.value.toLowerCase(); this.touched[key] = true; this.refresh(true); } });
     box.appendChild(inp);
   },
+  buildPowers() {
+    const sl = $("powSlots"), pl = $("powList"); sl.innerHTML = pl.innerHTML = "";
+    for (let i = 0; i < 2; i++) { const b = document.createElement("button"); b.type = "button"; b.className = "choice"; b.dataset.slot = i; b.setAttribute("role", "radio"); b.addEventListener("click", () => { this.sel.slot = i; this.syncPowers(); }); sl.appendChild(b); }
+    for (const id of Powers.list()) {
+      const p = POWERS[id], b = document.createElement("button"); b.type = "button"; b.className = "choice"; b.dataset.key = id; b.setAttribute("role", "option");
+      b.innerHTML = "<b>" + p.icon + " " + p.name + "</b><span>" + p.tag + " · " + p.cost + " de energia · " + p.cd + " s</span>";
+      b.addEventListener("click", () => this.equip(id)); b.addEventListener("mouseenter", () => this.showPower(id)); b.addEventListener("focus", () => this.showPower(id)); pl.appendChild(b);
+    }
+  },
+  equip(id) {
+    const s = this.sel, cur = s.powers.indexOf(id);
+    if (cur === s.slot) s.powers[cur] = "";                                    // clicar no poder do espaço ativo desequipa
+    else { if (cur >= 0) s.powers[cur] = s.powers[s.slot]; s.powers[s.slot] = id; }
+    s.powers = Powers.sanitize(s.powers); this.showPower(id); this.refresh(true);
+  },
+  showPower(id) { const p = POWERS[id]; if (p) $("powInfo").innerHTML = "<h3>" + p.icon + " " + p.name + "</h3><p>" + p.text + '</p><p class="small">' + p.tag + " · custa " + p.cost + " de energia · recarga " + p.cd + " s</p>"; },
+  syncPowers() {
+    const s = this.sel, r = RACES[s.raceKey];
+    document.querySelectorAll("#powSlots .choice").forEach(b => { const i = +b.dataset.slot, p = POWERS[s.powers[i]]; b.classList.toggle("sel", i === s.slot); b.setAttribute("aria-checked", i === s.slot); b.innerHTML = "<b>" + (p ? p.icon + " " + p.name : "— vazio —") + "</b><span>Espaço " + (i + 1) + " · tecla " + (i + 1) + "</span>"; });
+    document.querySelectorAll("#powList .choice").forEach(b => { const on = s.powers.includes(b.dataset.key); b.classList.toggle("sel", on); b.setAttribute("aria-selected", on); });
+    $("powRace").innerHTML = "<h3>" + r.skill.icon + " Poder exclusivo da raça (H) — " + r.skill.name + "</h3><p>" + r.skill.text + "</p>";
+  },
   pickRace(k) {
     const old = RACES[this.sel.raceKey]; this.sel.raceKey = k; const nw = RACES[k];
     for (const c of ["outfit", "hair", "aura"]) if (!this.touched[c] || this.sel[c] === old.defaults[c]) { this.sel[c] = nw.defaults[c]; this.touched[c] = false; }
     this.refresh();
   },
   setSel(ch, difficulty, mode) {
-    this.sel = { name: ch.name, raceKey: ch.raceKey, clanKey: ch.clanKey, outfit: ch.outfit, hair: ch.hair, aura: ch.aura, accessory: ch.accessory || "none", body: BODY.sanitize(ch.body), difficulty: difficulty === "hard" ? "hard" : "normal", mode: mode === "tourney" ? "tourney" : "quick" };
+    this.sel = { name: ch.name, raceKey: ch.raceKey, clanKey: ch.clanKey, outfit: ch.outfit, hair: ch.hair, aura: ch.aura, accessory: ch.accessory || "none", body: BODY.sanitize(ch.body), powers: Powers.sanitize(ch.powers), slot: 0, difficulty: difficulty === "hard" ? "hard" : "normal", mode: mode === "tourney" ? "tourney" : "quick" };
     this.touched = { outfit: true, hair: true, aura: true }; $("fighterName").value = ch.name; $("difficulty").value = this.sel.difficulty; $("mode").value = this.sel.mode; this.refresh();
   },
   character() { return Save.sanitizeCharacter(this.sel); },
@@ -392,7 +418,7 @@ const UI = {
       document.querySelectorAll("#" + id + " .sw").forEach(b => b.classList.toggle("sel", b.dataset.c === s[key]));
       const inp = document.querySelector("#" + id + " input"); if (inp && !keepInput) inp.value = s[key];
     }
-    this.syncBody();
+    this.syncBody(); this.syncPowers();
     $("difficulty").disabled = s.mode === "tourney";
     if (!Shop.hasAcc(Game.profile, s.accessory)) s.accessory = "none";
     document.querySelectorAll("#accList .choice").forEach(b => { const own = Shop.hasAcc(Game.profile, b.dataset.key), on = b.dataset.key === s.accessory; b.disabled = !own; b.title = own ? "" : "Disponível na loja"; b.classList.toggle("sel", on); b.setAttribute("aria-checked", on); });
@@ -445,18 +471,22 @@ const UI = {
     const b = [];
     if (f.awakenT > 0) b.push('<span class="badge aw">DESPERTO ' + f.awakenT.toFixed(1) + "s</span>");
     if (f.burn) b.push('<span class="badge bn">QUEIMANDO</span>');
+    if (f.poison) b.push('<span class="badge bn" style="color:#9bff5a">ENVENENADO</span>');
+    for (const k in f.st) if (f.st[k] > 0 && STATUS_INFO[k]) b.push('<span class="badge bn" style="color:' + STATUS_INFO[k].color + '">' + STATUS_INFO[k].icon + " " + STATUS_INFO[k].name.toUpperCase() + " " + f.st[k].toFixed(1) + "s</span>");
+    if (f.shield > 0) b.push('<span class="badge bn" style="color:#8fd0ff">🔰 ' + Math.ceil(f.shield) + "</span>");
     if (f.stun > 0 && !f.ko) b.push('<span class="badge st">ATORDOADO</span>');
     if (f.guarding) b.push('<span class="badge gd">DEFENDENDO</span>');
     return b.join("");
   },
   initHud(m) {
-    this.cache = {}; this.prev = { blast: 0, dash: 0, awaken: 0, race: 0 }; const p = m.player, e = m.enemy;
+    this.cache = {}; this.prev = { blast: 0, dash: 0, awaken: 0, race: 0, p1: 0, p2: 0 }; const p = m.player, e = m.enemy;
     $("pIcon").textContent = p.race.icon; $("eIcon").textContent = e.race.icon;
     $("pName").textContent = p.name; $("eName").textContent = e.name;
     $("pMeta").textContent = p.race.name + " · " + CLANS[p.clanKey].name + " · Nv " + p.stats.level + " · " + StatBuilder.rank(m.profile.level, m.profile.wins);
     $("eMeta").textContent = e.race.name + " · " + CLANS[e.clanKey].name + " · Nv " + e.stats.level;
     $("skBlastCost").textContent = Math.round(p.cost("blast")); $("skDashCost").textContent = Math.round(p.cost("dash")); $("skAwakenCost").textContent = Math.round(p.cost("awaken"));
     const sk = p.race.skill; $("skRaceIc").textContent = sk.icon; $("skRaceName").textContent = sk.name; $("skRaceCost").textContent = sk.cost;
+    for (const s of ["p1", "p2"]) { const pw = p.slots[s], el = $(s === "p1" ? "skP1" : "skP2"), id = s === "p1" ? "skP1" : "skP2"; el.style.display = pw ? "" : "none"; if (pw) { $(id + "Ic").textContent = pw.icon; $(id + "Name").textContent = pw.name; $(id + "Cost").textContent = pw.cost; el.title = pw.text; } }
     $("pauseBtn").disabled = false; $("pauseBtn").textContent = "Pausar";
     $("pHpG").style.transform = $("eHpG").style.transform = "scaleX(1)";
   },
@@ -473,7 +503,7 @@ const UI = {
       if (this.prev[type] > 0 && cd <= 0) { el.classList.remove("ready"); void el.offsetWidth; el.classList.add("ready"); }
       this.prev[type] = cd;
     };
-    sk("race", "skRace", "skRaceCd", "skRaceT"); sk("blast", "skBlast", "skBlastCd", "skBlastT"); sk("dash", "skDash", "skDashCd", "skDashT"); sk("awaken", "skAwaken", "skAwakenCd", "skAwakenT");
+    sk("race", "skRace", "skRaceCd", "skRaceT"); if (p.slots.p1) sk("p1", "skP1", "skP1Cd", "skP1T"); if (p.slots.p2) sk("p2", "skP2", "skP2Cd", "skP2T"); sk("blast", "skBlast", "skBlastCd", "skBlastT"); sk("dash", "skDash", "skDashCd", "skDashT"); sk("awaken", "skAwaken", "skAwakenCd", "skAwakenT");
     $("skAwaken").classList.toggle("on", p.awakenT > 0); if (p.awakenT > 0) this.setText("skAwakenT", p.awakenT.toFixed(1) + "s");
     $("skAtk").classList.toggle("on", !!(p.act && p.act.type === "attack")); this.setText("skAtkStep", (p.comboTimer > 0 && p.comboStep > 0 ? p.comboStep + 1 : 1) + "/3");
     $("skGuard").classList.toggle("on", p.guarding);
@@ -548,7 +578,7 @@ const Game = {
     $("pauseBtn").addEventListener("click", () => { blur(); this.togglePause(); });
     $("restartBtn").addEventListener("click", () => { blur(); this.rematch(true); });
     const tap = (id, fn) => $(id).addEventListener("pointerdown", e => { e.preventDefault(); fn(); });
-    tap("mobileAttack", () => this.press("attack")); tap("mobileBlast", () => this.press("blast")); tap("mobileDash", () => this.press("dash")); tap("mobileRace", () => this.press("race")); tap("mobileAwaken", () => this.press("awaken")); tap("tJump", () => this.press("jump"));
+    tap("mobileAttack", () => this.press("attack")); tap("mobileBlast", () => this.press("blast")); tap("mobileDash", () => this.press("dash")); tap("mobileRace", () => this.press("race")); tap("mobileP1", () => this.press("p1")); tap("mobileP2", () => this.press("p2")); tap("mobileAwaken", () => this.press("awaken")); tap("tJump", () => this.press("jump"));
     const hold = (id, key) => { const el = $(id), on = e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (_) { } Input.touch[key] = true; el.classList.add("hold"); }, off = () => { Input.touch[key] = false; el.classList.remove("hold"); };
       el.addEventListener("pointerdown", on); ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => el.addEventListener(ev, off)); };
     hold("tLeft", "left"); hold("tRight", "right"); hold("mobileGuard", "guard");
@@ -563,6 +593,6 @@ const Game = {
 };
 
 /* depuração/teste: expõe módulos sem alterar o jogo */
-window.DragonArena = { Online, NetView, BODY, Shop, ARENAS, SHOP_ITEMS, UPGRADES, UPGRADE_MAX, Sound, Game, Match, Fighter, Combat, AI, FX, Input, Save, StatBuilder, Progress, RACES, CLANS, CFG, UI, MOVES, Sprites, Renderer };
+window.DragonArena = { Online, NetView, BODY, Shop, ARENAS, SHOP_ITEMS, UPGRADES, UPGRADE_MAX, Sound, Game, Match, Fighter, Combat, AI, FX, Input, Save, StatBuilder, Progress, RACES, POWERS, Powers, CLANS, CFG, UI, MOVES, Sprites, Renderer };
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => Game.init()); else Game.init();
 })();

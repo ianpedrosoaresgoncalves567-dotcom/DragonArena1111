@@ -45,12 +45,14 @@ async function pair(port, a, b, ca, cb) {
   console.log("Partida ranqueada completa");
   const A2 = new Client(port), B2 = new Client(port); await A2.open(); await B2.open();
   const resA = await A2.auth("login", "alice", "senha123"), resB = await B2.auth("login", "bob", "senha456"); ok(resA.ok && resB.ok, "login dos dois");
-  A2.send({ t: "queue", character: CH }); B2.send({ t: "queue", character: Object.assign({}, CH, { raceKey: "luminar", clanKey: "vazio", body: { gender: "fem", height: 110 } }) });
+  A2.send({ t: "queue", character: Object.assign({}, CH, { powers: ["mina", "mina"] }) }); B2.send({ t: "queue", character: Object.assign({}, CH, { raceKey: "trovao", clanKey: "vazio", powers: ["prisao", "faisca"], body: { gender: "fem", height: 110 } }) });
   const [m1, m2] = await Promise.all([A2.waitT("match", 12000), B2.waitT("match", 12000)]);
   ok(m1.slot + m2.slot === 1 && m1.id === m2.id, "os dois entram na mesma partida, em lados diferentes");
   ok(m1.names[0] !== m1.names[1] && m1.chars.length === 2 && m1.level === 10, "dados da partida (nomes, personagens, nível normalizado)");
-  const bFem = m1.chars.find(c => c.raceKey === "luminar"); ok(bFem.body.gender === "fem" && bFem.body.height === 110, "corpo personalizado chega ao rival");
-  const slotA = m1.slot;                      // Alice ataca; Bob fica parado
+  const bFem = m1.chars.find(c => c.raceKey === "trovao"); ok(bFem.body.gender === "fem" && bFem.body.height === 110, "corpo personalizado chega ao rival");
+  ok(JSON.stringify(bFem.powers) === '["","faisca"]' && JSON.stringify(m1.chars.find(c => c.raceKey === "ignar").powers) === '["mina",""]', "poderes sanitizados no servidor (exclusivo e duplicado descartados): " + JSON.stringify(m1.chars.map(c => c.powers)));
+  const slotA = m1.slot;
+  await sleep(2300); A2.send({ t: "press", a: "p1" }); await sleep(900); ok(A2.last && A2.last.f[slotA].cd.p1 > 5, "servidor executa poder equipado (recarga p1 = " + (A2.last && A2.last.f[slotA].cd.p1) + ")");                      // Alice ataca; Bob fica parado
   const stop = aggressive(A2, slotA);
   const [fa, fb] = await Promise.all([A2.waitT("result", 90000), B2.waitT("result", 90000)]);
   stop();
@@ -74,7 +76,7 @@ async function pair(port, a, b, ca, cb) {
   G.send({ t: "queue", character: CH }); H.send({ t: "queue", character: CH }); const [mg] = await Promise.all([G.waitT("match", 12000), H.waitT("match", 12000)]);
   await sleep(400); const snapsBefore = H.snaps; G.close(); await H.waitT("oppdc", 3000); ok(true, "rival é avisado da queda");
   await sleep(300); const s1 = H.snaps; await sleep(300); ok(H.snaps === s1, "partida pausa enquanto o rival está fora");
-  const G2 = new Client(port); await G2.open(); G2.send({ t: "resume", token: rg.token, v: "1" }); const rr = await G2.wait(m => m.t === "auth"); ok(rr.ok, "sessão retomada pelo token");
+  const G2 = new Client(port); await G2.open(); G2.send({ t: "resume", token: rg.token, v: "2" }); const rr = await G2.wait(m => m.t === "auth"); ok(rr.ok, "sessão retomada pelo token");
   const mg2 = await G2.waitT("match", 3000); ok(mg2.resumed && mg2.id === mg.id && mg2.slot === mg.slot, "volta para a mesma partida e lado"); await H.waitT("oppback", 3000); ok(true, "rival é avisado da volta");
   await sleep(500); ok(G2.snaps > 3 && H.snaps > s1, "snapshots voltam a fluir");
   G2.close(); const rH = await H.waitT("result", 6000); ok(rH.res === "win" && rH.type === "forfeit", "sem voltar dentro do prazo, quem caiu perde por abandono");

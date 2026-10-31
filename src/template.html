@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b1020">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dragon Arena"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<title>Dragon Arena — Versão 0.8</title>
+<title>Dragon Arena — Versão 0.9</title>
 <style>
 :root{--bg:#0b1020;--panel:#151d32;--panel2:#202b45;--text:#eef4ff;--muted:#9fb0cf;--cyan:#55e6ff;--gold:#ffce63;--red:#ff5f75;--green:#6cf0a5;--line:#2e4268}
 *{box-sizing:border-box}
@@ -147,8 +147,8 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
 <body>
 <div class="wrap">
   <header class="top">
-    <div><div class="logo">DRAGON <span>ARENA</span></div><div class="tag">LUTA 2D EM PIXEL ART · VERSÃO 0.8</div></div>
-    <div class="row"><button id="installBtn" type="button" class="hidden" style="padding:4px 10px">📲 Instalar app</button><button id="muteBtn" type="button" aria-label="Silenciar" title="Silenciar (M)" style="padding:4px 10px">🔊</button><span class="pill">OFFLINE</span><span class="pill">PIXEL ART PROCEDURAL</span><span class="pill">BUILD 0.8</span></div>
+    <div><div class="logo">DRAGON <span>ARENA</span></div><div class="tag">LUTA 2D EM PIXEL ART · VERSÃO 0.9</div></div>
+    <div class="row"><button id="installBtn" type="button" class="hidden" style="padding:4px 10px">📲 Instalar app</button><button id="muteBtn" type="button" aria-label="Silenciar" title="Silenciar (M)" style="padding:4px 10px">🔊</button><span class="pill">OFFLINE</span><span class="pill">PIXEL ART PROCEDURAL</span><span class="pill">BUILD 0.9</span></div>
   </header>
 
   <section id="menu" class="menu">
@@ -156,6 +156,7 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
       <button type="button" role="tab" id="tabbtn-match" data-tab="match" aria-controls="tab-match" aria-selected="true">⚔️ Partida</button>
       <button type="button" role="tab" id="tabbtn-online" data-tab="online" aria-controls="tab-online" aria-selected="false" tabindex="-1">🌐 Online</button>
       <button type="button" role="tab" id="tabbtn-char" data-tab="char" aria-controls="tab-char" aria-selected="false" tabindex="-1">🧬 Personagem</button>
+      <button type="button" role="tab" id="tabbtn-powers" data-tab="powers" aria-controls="tab-powers" aria-selected="false" tabindex="-1">⚡ Poderes</button>
       <button type="button" role="tab" id="tabbtn-colors" data-tab="colors" aria-controls="tab-colors" aria-selected="false" tabindex="-1">🎨 Cores</button>
       <button type="button" role="tab" id="tabbtn-body" data-tab="body" aria-controls="tab-body" aria-selected="false" tabindex="-1">🧍 Corpo</button>
       <button type="button" role="tab" id="tabbtn-shop" data-tab="shop" aria-controls="tab-shop" aria-selected="false" tabindex="-1">🛒 Loja</button>
@@ -185,7 +186,7 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
           <div id="onHome" class="hidden">
             <div class="rankcard"><div class="row" style="justify-content:space-between"><b id="onUserName"></b><span class="pill" id="onPts"></span></div><div id="onRank" class="rankname"></div>
               <div class="bar xp"><i id="onBar" style="transform:scaleX(0)"></i></div><div class="small" id="onNext"></div><div class="small" id="onStats" style="margin-top:6px"></div><div class="small" id="onPlace"></div></div>
-            <div class="row" style="margin-top:12px"><button id="onQueue" type="button" class="primary">⚔ Buscar partida ranqueada</button><button id="onCancel" type="button" class="hidden">Cancelar busca</button><button id="onLogout" type="button">Sair da conta</button></div>
+            <div class="row" style="margin-top:12px"><button id="onQueue" type="button" class="primary">⚔ Buscar partida ranqueada</button><button id="onCancel" type="button" class="hidden">Cancelar busca</button><button id="onBot" type="button" class="hidden">🤖 Treinar contra o computador</button><button id="onLogout" type="button">Sair da conta</button></div>
             <div id="onQueueInfo" class="small" style="margin-top:6px"></div>
             <h3 class="sub">Últimas partidas</h3><ul id="onHist" class="plist"></ul>
           </div>
@@ -201,6 +202,14 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
           <div class="infobox" id="raceInfo"></div>
           <div class="field"><span class="lbl">Clã</span><div id="clanList" class="choices" role="radiogroup" aria-label="Clã"></div></div>
           <div class="infobox" id="clanInfo"></div>
+        </div>
+        <div class="panel hidden" id="tab-powers" role="tabpanel" aria-labelledby="tabbtn-powers">
+          <h2>⚡ Poderes</h2>
+          <p class="small">Equipe até <b>2 poderes</b> além do poder exclusivo da sua raça. Escolha um espaço e clique no poder. Teclas: <b>1</b> e <b>2</b> (ou <b>;</b> e <b>'</b>). Valem também no ranqueado.</p>
+          <div class="field"><span class="lbl">Espaços equipados</span><div id="powSlots" class="choices" role="radiogroup" aria-label="Espaços de poder"></div></div>
+          <div class="infobox" id="powRace"></div>
+          <div class="field"><span class="lbl">Poderes disponíveis</span><div id="powList" class="choices" role="listbox" aria-label="Poderes"></div></div>
+          <div class="infobox" id="powInfo"></div>
         </div>
         <div class="panel hidden" id="tab-colors" role="tabpanel" aria-labelledby="tabbtn-colors">
           <h2>🎨 Cores e acessório</h2>
@@ -221,7 +230,7 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
         </div>
         <div class="panel hidden" id="tab-help" role="tabpanel" aria-labelledby="tabbtn-help">
           <h2>🎮 Controles</h2>
-        <p style="margin:0 0 6px"><span class="key">A</span>/<span class="key">D</span> mover · <span class="key">W</span> pular · <span class="key">S</span> defender · <span class="key">J</span> ataque (combo de 3) · <span class="key">K</span> rajada · <span class="key">L</span> investida/esquiva · <span class="key">U</span> despertar · <span class="key">H</span> habilidade racial · <span class="key">M</span> som · <span class="key">Esc</span>/<span class="key">P</span> pausar · <span class="key">R</span> revanche</p>
+        <p style="margin:0 0 6px"><span class="key">A</span>/<span class="key">D</span> mover · <span class="key">W</span> pular · <span class="key">S</span> defender · <span class="key">J</span> ataque (combo de 3) · <span class="key">K</span> rajada · <span class="key">L</span> investida/esquiva · <span class="key">U</span> despertar · <span class="key">H</span> habilidade racial · <span class="key">1</span>/<span class="key">2</span> poderes equipados (ou <span class="key">;</span>/<span class="key">'</span>) · <span class="key">M</span> som · <span class="key">Esc</span>/<span class="key">P</span> pausar · <span class="key">R</span> revanche</p>
         <p class="small" style="margin:0">Defesa logo ao apertar <b>S</b> faz um bloqueio perfeito. Setas também movem. No celular, use os botões na tela.</p>
         </div>
       </div>
@@ -280,6 +289,8 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
       <div class="skill" id="skDash"><span class="kk">L</span><span class="ic">💨</span><span class="sn">Investida</span><span class="co" id="skDashCost"></span><div class="cd" id="skDashCd"></div><div class="ct" id="skDashT"></div></div>
       <div class="skill" id="skGuard"><span class="kk">S</span><span class="ic">🛡</span><span class="sn">Defesa</span></div>
       <div class="skill" id="skRace"><span class="kk">H</span><span class="ic" id="skRaceIc">✨</span><span class="sn" id="skRaceName">Racial</span><span class="co" id="skRaceCost"></span><div class="cd" id="skRaceCd"></div><div class="ct" id="skRaceT"></div></div>
+      <div class="skill" id="skP1"><span class="kk">1</span><span class="ic" id="skP1Ic">⚡</span><span class="sn" id="skP1Name">Poder 1</span><span class="co" id="skP1Cost"></span><div class="cd" id="skP1Cd"></div><div class="ct" id="skP1T"></div></div>
+      <div class="skill" id="skP2"><span class="kk">2</span><span class="ic" id="skP2Ic">⚡</span><span class="sn" id="skP2Name">Poder 2</span><span class="co" id="skP2Cost"></span><div class="cd" id="skP2Cd"></div><div class="ct" id="skP2T"></div></div>
       <div class="skill" id="skAwaken"><span class="kk">U</span><span class="ic">🔥</span><span class="sn">Despertar</span><span class="co" id="skAwakenCost"></span><div class="cd" id="skAwakenCd"></div><div class="ct" id="skAwakenT"></div></div>
     </div>
     <div class="arena-actions">
@@ -288,11 +299,11 @@ p{color:#c6d2e8;line-height:1.5;margin:6px 0}
     </div>
     <div class="touchpad" id="touchpad">
       <div class="cl"><button id="tLeft" aria-label="Esquerda">◀</button><button id="tRight" aria-label="Direita">▶</button><button id="tJump" aria-label="Pular">▲</button></div>
-      <div class="cl" style="justify-content:flex-end"><button id="mobileAttack">Ataque</button><button id="mobileBlast">Rajada</button><button id="mobileDash">Investida</button><button id="mobileAwaken">Despertar</button><button id="mobileRace">Racial</button><button id="mobileGuard">Defender</button></div>
+      <div class="cl" style="justify-content:flex-end"><button id="mobileAttack">Ataque</button><button id="mobileBlast">Rajada</button><button id="mobileDash">Investida</button><button id="mobileAwaken">Despertar</button><button id="mobileRace">Racial</button><button id="mobileP1">Poder 1</button><button id="mobileP2">Poder 2</button><button id="mobileGuard">Defender</button></div>
     </div>
     <div class="log" id="battleLog">A luta vai começar!</div>
   </section>
-  <div class="footer">DRAGON ARENA 0.8 · Jogo de luta 2D original · Nenhum recurso externo necessário</div>
+  <div class="footer">DRAGON ARENA 0.9 · Jogo de luta 2D original · Nenhum recurso externo necessário</div>
 </div>
 <script>
 /*__SCRIPT__*/

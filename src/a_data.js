@@ -29,7 +29,8 @@ const CFG = {
  * future-> espaço reservado para habilidades e transformações exclusivas.        */
 const DEFAULT_MODS = {
   atkSpeed: 1, stunResist: 1, knockResist: 1, blastCostMul: 1, blastDmgMul: 1, blastRadius: 4,
-  dashCdMul: 1, dashCostMul: 1, dashDamage: 3, doubleJump: false, burn: null, lowHpRegen: null, kiOnHit: 4
+  dashCdMul: 1, dashCostMul: 1, dashDamage: 3, doubleJump: false, burn: null, lowHpRegen: null, kiOnHit: 4,
+  chill: 0, venom: null, crit: null, lifesteal: 0
 };
 const RACES = {
   ignar: {
@@ -170,7 +171,7 @@ const Save = {
     const outfit = col(c.outfit, col(c.skin, race.defaults.outfit)), hair = col(c.hair, race.defaults.hair);
     return {
       name: String(c.name == null ? "" : c.name).replace(/[\u0000-\u001f<>&"']/g, "").trim().slice(0, 18) || "Guerreiro",
-      raceKey, clanKey: CLANS[c.clanKey] ? c.clanKey : "chama", body: BODY.sanitize(c.body), accessory: (typeof ACCESSORIES !== "undefined" && ACCESSORIES[c.accessory]) ? c.accessory : "none", outfit, hair, aura: col(c.aura, col(c.hair, race.defaults.aura))
+      raceKey, clanKey: CLANS[c.clanKey] ? c.clanKey : "chama", body: BODY.sanitize(c.body), powers: (typeof Powers !== "undefined") ? Powers.sanitize(c.powers) : ["", ""], accessory: (typeof ACCESSORIES !== "undefined" && ACCESSORIES[c.accessory]) ? c.accessory : "none", outfit, hair, aura: col(c.aura, col(c.hair, race.defaults.aura))
     };
   },
   sanitize(raw) {

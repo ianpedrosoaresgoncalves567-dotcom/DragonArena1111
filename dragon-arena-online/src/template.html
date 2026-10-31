@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dragon Arena"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<title>Dragon Arena — Versão 0.8</title>
+<style>
+:root{--bg:#0b1020;--panel:#151d32;--panel2:#202b45;--text:#eef4ff;--muted:#9fb0cf;--cyan:#55e6ff;--gold:#ffce63;--red:#ff5f75;--green:#6cf0a5;--line:#2e4268}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(ellipse at top,#18264a,#090d18 70%) fixed;color:var(--text);font-family:system-ui,"Segoe UI",Roboto,sans-serif;min-height:100vh;-webkit-tap-highlight-color:transparent}
+button,input,select{font:inherit}
+button{border:1px solid #41557e;background:#263858;color:var(--text);padding:10px 14px;border-radius:9px;cursor:pointer;font-weight:700;touch-action:manipulation}
+button:hover{filter:brightness(1.18)}button:disabled{opacity:.4;cursor:not-allowed;filter:none}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.wrap{max-width:1180px;margin:auto;padding:16px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-weight:900;letter-spacing:3px;font-size:clamp(22px,4vw,36px);text-shadow:0 0 18px #42baff66}.logo span{color:var(--gold)}
+.tag{color:var(--muted);font-size:12px;letter-spacing:1px}
+.card{background:linear-gradient(145deg,#19243b,#101729);border:1px solid var(--line);border-radius:15px;padding:16px;box-shadow:0 12px 35px #0003}
+.hidden{display:none!important}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;padding:6px;background:#0b1325;border:1px solid var(--line);border-radius:14px}
+.tabs button{flex:1 1 auto;padding:9px 12px;font-size:13px;font-weight:800;border-radius:10px;background:transparent;border:1px solid transparent;color:#a9bbdf;white-space:nowrap}
+.tabs button:hover{background:#16213b}
+.tabs button[aria-selected=true]{background:#1d2a4a;border-color:#ffd45e;color:#fff}
+.panel h2{margin-top:0}
+.rankcard{background:#0c1426;border:1px solid #293d62;border-radius:12px;padding:12px;margin-top:10px}
+.rankname{font:900 26px ui-monospace,Consolas,monospace;color:#ffe08a;margin:2px 0 6px}
+.sub{margin:16px 0 6px;font-size:14px;color:#cfe0ff}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.plist li{background:#0c1426;border:1px solid #223457;border-radius:8px;padding:6px 9px}
+.plist li.win{border-left:3px solid #6fe39a}.plist li.loss{border-left:3px solid #ff7a8e}.plist li.me{border-color:#ffd45e;color:#ffe9a8}
+.mini-btn{padding:3px 8px;font-size:11px;margin-left:8px}
+.howto{margin-top:14px}.howto summary{cursor:pointer;color:#ffd45e;font-weight:800;font-size:13px}
+#banner p{white-space:pre-line}
+.golink{color:#ffd45e;font-weight:800}
+@media(min-width:901px){.menu .side{position:sticky;top:12px}}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:16px;align-items:start}
+.side{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.field>label,.lbl{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.6px}
+input[type=text],select{background:#0b1222;color:var(--text);border:1px solid #34496d;border-radius:8px;padding:10px;min-width:0;width:100%}
+h2{font-size:18px;margin:0 0 10px}h3{font-size:14px;margin:0 0 6px;color:var(--gold)}
+p{color:#c6d2e8;line-height:1.5;margin:6px 0}
+.small{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;border-radius:99px;background:#273b5b;padding:4px 9px;font-size:11px;color:#d8e8ff;margin:2px}
+.primary{background:linear-gradient(135deg,#176aab,#3549a6);border-color:#4b8ee1}
+.gold{background:linear-gradient(135deg,#8a5a15,#bb8121);border-color:#e8ba57}
+.danger{background:#4a2234;border-color:#8a3f57}
+.key{background:#293650;border:1px solid #516486;border-radius:5px;padding:2px 6px;font-size:11px;color:#fff;font-family:ui-monospace,Consolas,monospace}
+/* editor */
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:9px 11px;background:#0e1730;border:1px solid #2c4068;border-radius:11px}
+.choice b{font-size:14px}.choice span{font-size:11px;color:var(--muted);font-weight:600}
+.choice.sel{border-color:var(--gold);background:linear-gradient(145deg,#2a2a1e,#16213a);box-shadow:0 0 0 1px #ffce6355,0 0 16px #ffce6322}
+.swatches{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.sw{width:30px;height:30px;padding:0;border-radius:8px;border:2px solid #0004}
+.sw.sel{outline:2px solid #fff;outline-offset:2px}
+.swatches input[type=color]{width:34px;height:30px;padding:0;border:1px solid #41557e;border-radius:8px;background:none;cursor:pointer}
+#previewBox{display:flex;gap:12px;flex-wrap:wrap}
+.bodybox summary{cursor:pointer;padding:4px 0}
+.brow{display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;margin:7px 0}
+.brow .lbl2{font-size:12px;color:var(--muted);font-weight:700}
+.brow>.mini,.brow>.swatches{grid-column:2/4}
+.brow input[type=range]{width:100%;accent-color:#ffd45e}
+.brow em{font-style:normal;font-size:12px;text-align:right;color:#cfe0ff}
+.mini{display:flex;flex-wrap:wrap;gap:5px}
+.mini button{padding:5px 9px;font-size:12px;border-radius:8px;background:#0e1730;border:1px solid #2c4068}
+.mini button.sel{border-color:#ffd45e;background:#262b44}
+.sw.none{display:flex;align-items:center;justify-content:center;color:#9db0d8;font-size:14px;background:#0e1730}
+@media(max-width:640px){.brow{grid-template-columns:1fr 44px}.brow .lbl2{grid-column:1/3}.brow>.mini,.brow>.swatches{grid-column:1/3}}
+#previewCanvas{width:200px;height:200px;border-radius:12px;border:1px solid #40577f;image-rendering:pixelated;background:#0b1025;cursor:pointer;flex:none}
+.pinfo{flex:1;min-width:200px}
+.stat{display:grid;grid-template-columns:70px 1fr 38px;align-items:center;gap:7px;margin:5px 0;font-size:12px;color:var(--muted)}
+.stat i{display:block;height:7px;border-radius:9px;background:#223052;overflow:hidden}
+.stat i b{display:block;height:100%;background:linear-gradient(90deg,#38a8ff,#9af2ff)}
+.stat em{font-style:normal;text-align:right;color:#dfe9ff}
+.infobox{background:#0c1426;border:1px solid #293d62;border-radius:10px;padding:10px 12px;margin-top:10px}
+.infobox p{margin:3px 0;font-size:13px}
+/* profile */
+.bar{position:relative;height:12px;border-radius:99px;background:#202c47;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:100%;transform-origin:left center;transition:transform .12s linear}
+.xp i{background:linear-gradient(90deg,#ffbf4c,#fff19a)}
+.profile-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.profile-grid div{background:#0c1426;border:1px solid #293d62;border-radius:10px;padding:8px;text-align:center}
+.profile-grid b{display:block;font-size:17px}.profile-grid span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+/* battle */
+#stage{position:relative;margin:0 auto;width:100%;max-width:1180px}
+#gameCanvas{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#0b1025;border-radius:12px;border:2px solid #3a5079;image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:pixelated;touch-action:none}
+.hud{display:grid;grid-template-columns:1fr 92px 1fr;gap:10px;align-items:stretch;margin:0 auto 8px;max-width:1180px}
+.fh{background:linear-gradient(145deg,#111b33,#0a1224);border:1px solid #2f4770;border-radius:12px;padding:8px 11px;min-width:0}
+.fh .head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.fh.e .head{flex-direction:row-reverse;text-align:right}
+.fh .ico{width:34px;height:34px;border-radius:9px;background:#1b2a4d;border:1px solid #3d5788;display:grid;place-items:center;font-size:19px;flex:none}
+.fh b.nm{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fh small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fh .meta{min-width:0;flex:1}
+.hbar{position:relative;height:15px;border-radius:5px;background:#1b2540;overflow:hidden;border:1px solid #0008;margin:3px 0}
+.hbar i{position:absolute;inset:0;transform-origin:left center}
+.fh.e .hbar i{transform-origin:right center}
+.hbar .g{background:#fff8;transition:transform .5s ease-out .25s}
+.hbar .v{transition:transform .08s linear}
+.hbar.hp .v{background:linear-gradient(90deg,#ff3f66,#ffa172)}
+.hbar.ki{height:10px}.hbar.ki .v{background:linear-gradient(90deg,#2aa7ff,#a5f5ff)}
+.hbar:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 19px,#0006 19px 20px);pointer-events:none}
+.hbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;text-shadow:0 1px 2px #000;z-index:2;letter-spacing:.4px}
+.status{display:flex;gap:5px;min-height:18px;flex-wrap:wrap}.fh.e .status{justify-content:flex-end}
+.badge{font-size:10px;font-weight:800;border-radius:99px;padding:2px 7px;background:#27385c;color:#dff}
+.badge.aw{background:#7a5a10;color:#ffe9a8}.badge.bn{background:#7a2c12;color:#ffd0b0}.badge.st{background:#5a2a52;color:#ffd0f6}.badge.gd{background:#1d4d78;color:#c9ecff}
+.timer{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a1224;border:1px solid #2f4770;border-radius:12px}
+.timer div{font:900 32px ui-monospace,Consolas,monospace;color:var(--gold);text-shadow:0 0 12px #ffce6355}.timer small{font-size:10px;color:var(--muted);letter-spacing:1px}
+#skillbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:10px 0}
+.skill{position:relative;width:76px;height:62px;border-radius:11px;background:linear-gradient(160deg,#18274a,#0b1226);border:1px solid #3a5586;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;user-select:none}
+.skill .ic{font-size:20px;line-height:1}.skill .sn{font-size:10px;color:#cfe0ff;font-weight:700}
+.skill .kk{position:absolute;left:4px;top:3px;font:800 10px ui-monospace,Consolas,monospace;background:#293650;border:1px solid #516486;border-radius:4px;padding:0 4px;color:#fff}
+.skill .co{position:absolute;right:4px;top:3px;font-size:9px;color:#8fd8ff;font-weight:800}
+.skill .cd{position:absolute;left:0;right:0;bottom:0;height:0;background:#000b;transition:height .06s linear}
+.skill .ct{position:absolute;inset:0;display:grid;place-items:center;font:900 15px ui-monospace,Consolas,monospace;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none}
+.skill.nok{opacity:.55}.skill.on{border-color:var(--gold);box-shadow:0 0 12px #ffce6366}
+.skill.ready{animation:rd .35s ease-out}
+@keyframes rd{0%{box-shadow:0 0 0 0 #fff}100%{box-shadow:0 0 0 8px #fff0}}
+#banner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;border-radius:12px;padding:12px}
+#banner.dim{background:#050916b8;pointer-events:auto}
+#banner h1{margin:0;font:900 clamp(28px,7vw,72px) ui-monospace,Consolas,monospace;letter-spacing:4px;color:#ffe08a;text-shadow:0 4px 0 #6a3b00,0 0 28px #ffb23c88}
+#banner h1.lose{color:#ff8197;text-shadow:0 4px 0 #5a1020,0 0 28px #ff4f6a66}
+#banner p{color:#e6eeff;font-size:clamp(12px,2vw,17px);margin:8px 0 0;max-width:560px}
+#banner .btns{display:flex;gap:10px;margin-top:16px;pointer-events:auto;flex-wrap:wrap;justify-content:center}
+.arena-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px}
+.touchpad{display:flex;justify-content:space-between;gap:10px;margin-top:12px;user-select:none;-webkit-user-select:none}
+.touchpad .cl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.touchpad button{min-width:54px;min-height:50px;padding:6px 10px;touch-action:none;font-size:13px}
+.touchpad button.hold{background:#2d4f86}
+.log{background:#0a1120;border-radius:9px;padding:9px 11px;color:#aebed8;font-size:12px;min-height:36px;margin-top:10px}
+.choice:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.shop-row{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#0c1426;border:1px solid #293d62;border-radius:10px;padding:8px 10px;margin:6px 0}
+.shop-row b{font-size:13px}.shop-row .t{display:block;font-size:11px;color:var(--muted);margin-top:2px}.shop-row button{padding:6px 10px;font-size:12px;white-space:nowrap}
+#shopCard h3{margin-top:12px}.pips{letter-spacing:2px;color:var(--gold);font-size:12px}
+.footer{text-align:center;color:#7184a7;font-size:11px;padding:18px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:640px){.tabs{flex-wrap:nowrap;overflow-x:auto}.tabs button{flex:0 0 auto}.wrap{padding:9px}.card{padding:12px}.hud{grid-template-columns:1fr 64px 1fr;gap:6px}.fh{padding:6px 7px}.fh .ico{width:26px;height:26px;font-size:14px}.fh b.nm{font-size:12px}.timer div{font-size:22px}.skill{width:62px;height:54px}.skill .sn{font-size:9px}#previewCanvas{width:100%;max-width:240px;height:auto;aspect-ratio:1}.profile-grid{grid-template-columns:repeat(2,1fr)}.arena-actions button{flex:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><div class="logo">DRAGON <span>ARENA</span></div><div class="tag">LUTA 2D EM PIXEL ART · VERSÃO 0.8</div></div>
+    <div class="row"><button id="installBtn" type="button" class="hidden" style="padding:4px 10px">📲 Instalar app</button><button id="muteBtn" type="button" aria-label="Silenciar" title="Silenciar (M)" style="padding:4px 10px">🔊</button><span class="pill">OFFLINE</span><span class="pill">PIXEL ART PROCEDURAL</span><span class="pill">BUILD 0.8</span></div>
+  </header>
+
+  <section id="menu" class="menu">
+    <nav class="tabs" role="tablist" aria-label="Menu principal">
+      <button type="button" role="tab" id="tabbtn-match" data-tab="match" aria-controls="tab-match" aria-selected="true">⚔️ Partida</button>
+      <button type="button" role="tab" id="tabbtn-online" data-tab="online" aria-controls="tab-online" aria-selected="false" tabindex="-1">🌐 Online</button>
+      <button type="button" role="tab" id="tabbtn-char" data-tab="char" aria-controls="tab-char" aria-selected="false" tabindex="-1">🧬 Personagem</button>
+      <button type="button" role="tab" id="tabbtn-colors" data-tab="colors" aria-controls="tab-colors" aria-selected="false" tabindex="-1">🎨 Cores</button>
+      <button type="button" role="tab" id="tabbtn-body" data-tab="body" aria-controls="tab-body" aria-selected="false" tabindex="-1">🧍 Corpo</button>
+      <button type="button" role="tab" id="tabbtn-shop" data-tab="shop" aria-controls="tab-shop" aria-selected="false" tabindex="-1">🛒 Loja</button>
+      <button type="button" role="tab" id="tabbtn-help" data-tab="help" aria-controls="tab-help" aria-selected="false" tabindex="-1">🎮 Ajuda</button>
+    </nav>
+    <div class="grid">
+      <div class="card" id="editorCard">
+        <div class="panel" id="tab-match" role="tabpanel" aria-labelledby="tabbtn-match">
+          <h2>⚔️ Partida</h2>
+          <div class="field"><label for="mode">Modo de jogo</label><select id="mode"><option value="quick">Luta rápida</option><option value="tourney">Torneio · 5 lutas contra rivais cada vez mais fortes</option></select></div>
+          <div class="field"><label for="arena">Arena</label><select id="arena"></select></div>
+          <div class="field"><label for="difficulty">Adversário (luta rápida)</label><select id="difficulty"><option value="normal">Combatente · Equilibrado</option><option value="hard">Elite · Mais agressivo (recompensa maior)</option></select></div>
+          <p class="small">Novas arenas são vendidas na <a href="#" class="golink" data-go="shop">Loja</a>. O botão <b>Entrar na arena</b> fica sempre visível ao lado da prévia.</p>
+          <div class="row"><button id="resetBtn" class="danger">Apagar progresso</button></div>
+          <div id="saveNote" class="small" style="margin-top:10px"></div>
+        </div>
+        <div class="panel hidden" id="tab-online" role="tabpanel" aria-labelledby="tabbtn-online">
+          <h2>🌐 Online · Ranqueado</h2>
+          <p class="small" style="margin-top:0">Lute contra outros jogadores, cada um no seu aparelho. O servidor decide a luta e os pontos. Na ranqueada todos usam <b>atributos iguais (nível 10, sem melhorias da loja)</b>; corpo, cores e acessórios são só visuais.</p>
+          <div class="field"><label for="onUrl">Servidor</label><div class="row"><input id="onUrl" type="text" placeholder="wss://seu-jogo.onrender.com" autocomplete="off" spellcheck="false" style="flex:1;min-width:180px"><button id="onConnect" type="button">Conectar</button></div><div id="onStatus" class="small">⚪ Desconectado</div></div>
+          <div id="onAuth" class="hidden">
+            <div class="field"><label for="onUser">Conta</label><input id="onUser" type="text" maxlength="16" placeholder="usuário (3–16: letras, números, _)" autocomplete="username" spellcheck="false" autocapitalize="off"></div>
+            <div class="field"><label for="onPass">Senha</label><input id="onPass" type="password" maxlength="72" placeholder="senha (mín. 6 caracteres)" autocomplete="current-password"></div>
+            <div class="row"><button id="onLogin" type="button" class="primary">Entrar</button><button id="onRegister" type="button">Criar conta</button></div>
+          </div>
+          <div id="onMsg" class="small" role="status" aria-live="polite" style="margin-top:8px"></div>
+          <div id="onHome" class="hidden">
+            <div class="rankcard"><div class="row" style="justify-content:space-between"><b id="onUserName"></b><span class="pill" id="onPts"></span></div><div id="onRank" class="rankname"></div>
+              <div class="bar xp"><i id="onBar" style="transform:scaleX(0)"></i></div><div class="small" id="onNext"></div><div class="small" id="onStats" style="margin-top:6px"></div><div class="small" id="onPlace"></div></div>
+            <div class="row" style="margin-top:12px"><button id="onQueue" type="button" class="primary">⚔ Buscar partida ranqueada</button><button id="onCancel" type="button" class="hidden">Cancelar busca</button><button id="onLogout" type="button">Sair da conta</button></div>
+            <div id="onQueueInfo" class="small" style="margin-top:6px"></div>
+            <h3 class="sub">Últimas partidas</h3><ul id="onHist" class="plist"></ul>
+          </div>
+          <h3 class="sub">🏆 Ranking <button id="onRefresh" type="button" class="mini-btn">Atualizar</button></h3><ul id="onLb" class="plist"></ul>
+          <details class="howto"><summary>Como os pontos são calculados</summary>
+            <p class="small">Cada luta gera uma <b>nota de 0 a 100</b> para cada jogador: 70% pelo <b>resultado</b> (KO vale mais que vitória por tempo; KO mais rápido vale mais) e 30% pelo <b>domínio de dano</b> (dano causado contra dano sofrido). Os pontos ganhos ou perdidos dependem da diferença entre essa nota e a esperada pela diferença de pontos dos dois (sistema Elo): vencer o mais forte rende mais; perder lutando bem custa menos. Vitória sempre rende pelo menos +5; abandonar custa a mais; repetir o mesmo rival 3 vezes em 1 hora reduz o ganho. Pontos nunca ficam abaixo de 0. As 5 primeiras partidas valem mais.</p>
+            <p class="small">Faixas: Bronze · Prata (1150) · Ouro (1300) · Platina (1450) · Diamante (1600) · Mestre (1750) · Lenda (1950). Cada faixa, exceto a Lenda, tem 3 divisões (III, II, I).</p></details>
+        </div>
+        <div class="panel hidden" id="tab-char" role="tabpanel" aria-labelledby="tabbtn-char">
+          <h2>🧬 Personagem</h2>
+          <div class="field"><label for="fighterName">Nome do guerreiro</label><input id="fighterName" type="text" maxlength="18" value="Guerreiro" placeholder="Seu nome" autocomplete="off" spellcheck="false"></div>
+          <div class="field"><span class="lbl">Raça</span><div id="raceList" class="choices" role="radiogroup" aria-label="Raça"></div></div>
+          <div class="infobox" id="raceInfo"></div>
+          <div class="field"><span class="lbl">Clã</span><div id="clanList" class="choices" role="radiogroup" aria-label="Clã"></div></div>
+          <div class="infobox" id="clanInfo"></div>
+        </div>
+        <div class="panel hidden" id="tab-colors" role="tabpanel" aria-labelledby="tabbtn-colors">
+          <h2>🎨 Cores e acessório</h2>
+          <div class="field"><span class="lbl">Cor da roupa</span><div id="swOutfit" class="swatches"></div></div>
+          <div class="field"><span class="lbl">Cor do cabelo</span><div id="swHair" class="swatches"></div></div>
+          <div class="field"><span class="lbl">Cor da energia (aura e rajadas)</span><div id="swAura" class="swatches"></div></div>
+          <div class="field"><span class="lbl">Acessório</span><div id="accList" class="choices"></div></div>
+          <p class="small">Mais cores e acessórios na <a href="#" class="golink" data-go="shop">Loja</a>.</p>
+        </div>
+        <div class="panel hidden" id="tab-body" role="tabpanel" aria-labelledby="tabbtn-body">
+          <h2>🧍 Corpo e aparência</h2>
+          <div id="bodyBox"></div>
+        </div>
+        <div class="panel hidden" id="tab-shop" role="tabpanel" aria-labelledby="tabbtn-shop">
+          <h2>🛒 Loja <span class="pill" id="shopCredits">0 créditos</span></h2>
+          <p class="small" style="margin-top:0">Gaste os créditos ganhos nas lutas. Os treinos são permanentes e têm teto de 5 níveis.</p>
+          <div id="shopList"></div><div id="shopMsg" class="small" role="status" aria-live="polite"></div>
+        </div>
+        <div class="panel hidden" id="tab-help" role="tabpanel" aria-labelledby="tabbtn-help">
+          <h2>🎮 Controles</h2>
+        <p style="margin:0 0 6px"><span class="key">A</span>/<span class="key">D</span> mover · <span class="key">W</span> pular · <span class="key">S</span> defender · <span class="key">J</span> ataque (combo de 3) · <span class="key">K</span> rajada · <span class="key">L</span> investida/esquiva · <span class="key">U</span> despertar · <span class="key">H</span> habilidade racial · <span class="key">M</span> som · <span class="key">Esc</span>/<span class="key">P</span> pausar · <span class="key">R</span> revanche</p>
+        <p class="small" style="margin:0">Defesa logo ao apertar <b>S</b> faz um bloqueio perfeito. Setas também movem. No celular, use os botões na tela.</p>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="card">
+          <h2>👁 Prévia</h2>
+          <div id="previewBox">
+            <canvas id="previewCanvas" width="100" height="100" aria-label="Prévia do guerreiro"></canvas>
+            <div class="pinfo">
+              <div id="statBars"></div>
+              <div class="small" style="margin-top:6px">Clique na prévia para ver golpes, rajada e despertar.</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px"><button id="startBtn" class="primary">⚔ Entrar na arena</button><button id="continueBtn">▶ Continuar salvo</button></div>
+        </div>
+        <div class="card">
+          <h2>📈 Progressão</h2>
+        <div class="row" style="justify-content:space-between"><b id="profLevel">Nível 1</b><span class="pill" id="profRank">Iniciante</span></div>
+        <div class="bar xp" style="margin-top:8px"><i id="profXpBar" style="transform:scaleX(0)"></i></div>
+        <div class="small" id="profXpTxt" style="margin-top:4px"></div>
+        <div class="profile-grid">
+          <div><b id="profWins">0</b><span>Vitórias</span></div>
+          <div><b id="profLosses">0</b><span>Derrotas</span></div>
+          <div><b id="profCredits">0</b><span>Créditos</span></div>
+          <div><b id="profTourney">0</b><span>Torneios</span></div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="battle" class="hidden">
+    <div class="hud">
+      <div class="fh p">
+        <div class="head"><div class="ico" id="pIcon">⚔</div><div class="meta"><b class="nm" id="pName">Guerreiro</b><small id="pMeta">Nível 1</small></div></div>
+        <div class="hbar hp"><i class="g" id="pHpG" style="transform:scaleX(1)"></i><i class="v" id="pHp" style="transform:scaleX(1)"></i><span id="pHpTxt">100</span></div>
+        <div class="hbar ki"><i class="v" id="pKi" style="transform:scaleX(1)"></i><span id="pKiTxt">100</span></div>
+        <div class="status" id="pStatus"></div>
+      </div>
+      <div class="timer"><div id="timer">90</div><small id="roundTxt">ROUND 1</small></div>
+      <div class="fh e">
+        <div class="head"><div class="ico" id="eIcon">⚔</div><div class="meta"><b class="nm" id="eName">Rival</b><small id="eMeta">Nível 1</small></div></div>
+        <div class="hbar hp"><i class="g" id="eHpG" style="transform:scaleX(1)"></i><i class="v" id="eHp" style="transform:scaleX(1)"></i><span id="eHpTxt">100</span></div>
+        <div class="hbar ki"><i class="v" id="eKi" style="transform:scaleX(1)"></i><span id="eKiTxt">100</span></div>
+        <div class="status" id="eStatus"></div>
+      </div>
+    </div>
+    <div id="stage">
+      <canvas id="gameCanvas" width="320" height="180" aria-label="Arena de luta"></canvas>
+      <div id="banner" class="hidden"><h1 id="bannerTitle"></h1><p id="bannerSub"></p><div class="btns" id="bannerBtns"></div></div>
+    </div>
+    <div id="skillbar">
+      <div class="skill" id="skAtk"><span class="kk">J</span><span class="ic">👊</span><span class="sn">Combo</span><span class="co" id="skAtkStep"></span></div>
+      <div class="skill" id="skBlast"><span class="kk">K</span><span class="ic">⚡</span><span class="sn">Rajada</span><span class="co" id="skBlastCost"></span><div class="cd" id="skBlastCd"></div><div class="ct" id="skBlastT"></div></div>
+      <div class="skill" id="skDash"><span class="kk">L</span><span class="ic">💨</span><span class="sn">Investida</span><span class="co" id="skDashCost"></span><div class="cd" id="skDashCd"></div><div class="ct" id="skDashT"></div></div>
+      <div class="skill" id="skGuard"><span class="kk">S</span><span class="ic">🛡</span><span class="sn">Defesa</span></div>
+      <div class="skill" id="skRace"><span class="kk">H</span><span class="ic" id="skRaceIc">✨</span><span class="sn" id="skRaceName">Racial</span><span class="co" id="skRaceCost"></span><div class="cd" id="skRaceCd"></div><div class="ct" id="skRaceT"></div></div>
+      <div class="skill" id="skAwaken"><span class="kk">U</span><span class="ic">🔥</span><span class="sn">Despertar</span><span class="co" id="skAwakenCost"></span><div class="cd" id="skAwakenCd"></div><div class="ct" id="skAwakenT"></div></div>
+    </div>
+    <div class="arena-actions">
+      <div class="row"><button id="backBtn">← Menu</button><button id="pauseBtn">Pausar</button><button id="restartBtn">Revanche</button></div>
+      <div class="small" style="align-self:center">Esc/P pausa · R revanche</div>
+    </div>
+    <div class="touchpad" id="touchpad">
+      <div class="cl"><button id="tLeft" aria-label="Esquerda">◀</button><button id="tRight" aria-label="Direita">▶</button><button id="tJump" aria-label="Pular">▲</button></div>
+      <div class="cl" style="justify-content:flex-end"><button id="mobileAttack">Ataque</button><button id="mobileBlast">Rajada</button><button id="mobileDash">Investida</button><button id="mobileAwaken">Despertar</button><button id="mobileRace">Racial</button><button id="mobileGuard">Defender</button></div>
+    </div>
+    <div class="log" id="battleLog">A luta vai começar!</div>
+  </section>
+  <div class="footer">DRAGON ARENA 0.8 · Jogo de luta 2D original · Nenhum recurso externo necessário</div>
+</div>
+<script>
+/*__SCRIPT__*/
+</script>
+</body>
+</html>

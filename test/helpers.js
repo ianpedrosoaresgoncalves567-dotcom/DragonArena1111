@@ -15,7 +15,7 @@ class Client {
   send(o) { this.ws.send(JSON.stringify(o)); }
   wait(f, ms) { const hit = this.msgs.find(f); if (hit) return Promise.resolve(hit); return new Promise((r, j) => { const w = { f, r }; this.waiters.push(w); setTimeout(() => { this.waiters = this.waiters.filter(x => x !== w); j(new Error("timeout esperando mensagem")); }, ms || 8000); }); }
   waitT(t, ms) { return this.wait(m => m.t === t, ms); }
-  async auth(kind, u, p, v) { this.send({ t: kind, u, p, v: v || "1" }); return this.wait(m => m.t === "auth" || (m.t === "err" && m.code === "version"), 8000).then(m => { this.msgs = this.msgs.filter(x => x !== m); return m; }); }
+  async auth(kind, u, p, v) { this.send({ t: kind, u, p, v: v || "2" }); return this.wait(m => m.t === "auth" || (m.t === "err" && m.code === "version"), 8000).then(m => { this.msgs = this.msgs.filter(x => x !== m); return m; }); }
   close() { try { this.ws.close(); } catch (e) { } }
 }
 const summary = () => { console.log(fails ? "\n" + fails + " FALHA(S), " + passes + " ok" : "\nTodos os " + passes + " testes passaram"); return fails; };

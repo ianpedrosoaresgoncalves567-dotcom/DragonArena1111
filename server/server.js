@@ -13,7 +13,7 @@ const rating = require("./rating");
 const auth = require("./auth");
 const { createStorage } = require("./storage");
 
-const NET_VERSION = "1";
+const NET_VERSION = "2";
 const STEP = 1 / 60, SNAP_EVERY = 2, HISTORY_MAX = 20, LB_SIZE = 20, ROOM_LINGER_MS = 4000;
 
 function createServer(opts) {
@@ -78,7 +78,10 @@ function createServer(opts) {
     verifyClient: info => !allowed.length || allowed.indexOf(info.origin) >= 0
   });
   wss.on("connection", (ws, req) => {
-    const c = { id: nextId++, ws, ip: String((req.headers["x-forwarded-for"] || req.socket.remoteAddress || "?")).split(",")[0].trim(), user: null, tokens: 300, tokAt: now(), alive: true, lastPress: 0, queued: null };
+    const ip = String((req.headers["x-forwarded-for"] || req.socket.remoteAddress || "?")).split(",").pop().trim();   // último valor = o que o proxy da hospedagem viu (o primeiro pode ser forjado)
+    const MAXIP = +process.env.MAX_CONN_PER_IP || 12;
+    if (ip !== "127.0.0.1" && ip !== "::1" && ip !== "::ffff:127.0.0.1" && [...conns].filter(x => x.ip === ip).length >= MAXIP) { try { ws.close(1013, "limite de conexões"); } catch (e) { } return; }
+    const c = { id: nextId++, ws, ip, user: null, tokens: 300, tokAt: now(), alive: true, lastPress: 0, queued: null };
     conns.add(c); send(c, Object.assign({ t: "hello", v: NET_VERSION }, stats()));
     ws.on("pong", () => { c.alive = true; });
     ws.on("message", async data => {

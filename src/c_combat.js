@@ -15,7 +15,7 @@ const DASH = { dur: .2, end: .3, iframes: .14, speed: 250, backSpeed: 190, box: 
 class Fighter {
   constructor(o) {
     this.id = o.id; this.name = o.name; this.isPlayer = !!o.isPlayer; this.raceKey = o.raceKey; this.race = RACES[o.raceKey];
-    this.clanKey = o.clanKey; this.stats = o.stats; this.look = o.look; this.palette = Sprites.makePalette(o.look, this.race);
+    this.clanKey = o.clanKey; this.stats = o.stats; const pw = Powers.sanitize(o.powers); this.slots = { race: this.race.skill, p1: POWERS[pw[0]] || null, p2: POWERS[pw[1]] || null }; this.look = o.look; this.palette = Sprites.makePalette(o.look, this.race);
     this.opp = null; this.m = null; this.ai = null; this.reset(o.x, o.face);
   }
   reset(x, face) {
@@ -23,14 +23,14 @@ class Fighter {
     Object.assign(this, {
       x, y: CFG.GROUND, vx: 0, vy: 0, kx: 0, face, onGround: true, hp: s.hp, ki: s.ki, act: null, stun: 0, invuln: 0, hitFlash: 0, blockT: 0,
       guarding: false, guardT: 0, parryCd: 0, parryOK: false, comboStep: 0, comboTimer: 0, chainHits: 0, chainTimer: 0, hitsTaken: 0, hitsTakenT: 0,
-      cd: { blast: 0, dash: 0, awaken: 0, race: 0 }, awakenT: 0, armorT: 0, hidden: false, burn: null, regenUsed: 0, regenTick: 0, airJumps: 0, airAtk: false,
-      buf: { attack: 0, blast: 0, dash: 0, awaken: 0, race: 0, jump: 0 }, intent: { moveX: 0, guard: false },
+      cd: { blast: 0, dash: 0, awaken: 0, race: 0, p1: 0, p2: 0 }, st: {}, shield: 0, poison: null, awakenT: 0, armorT: 0, hidden: false, burn: null, regenUsed: 0, regenTick: 0, airJumps: 0, airAtk: false,
+      buf: { attack: 0, blast: 0, dash: 0, awaken: 0, race: 0, p1: 0, p2: 0, jump: 0 }, intent: { moveX: 0, guard: false },
       animT: 0, landT: 0, wake: false, ko: false, koT: 0, victory: false, trailT: 0, lastMsg: ""
     });
   }
   press(a) { if (this.m && this.m.state === "fight" && !this.ko) this.buf[a] = CFG.BUFFER; }
-  cost(type) { const m = this.stats.mods; if (type === "race") return this.race.skill.cost; return type === "blast" ? COST.blast * m.blastCostMul : type === "dash" ? COST.dash * m.dashCostMul : COST.awaken; }
-  maxCd(type) { if (type === "race") return this.race.skill.cd; return type === "dash" ? CD.dash * this.stats.dashCdMul : CD[type]; }
+  cost(type) { const m = this.stats.mods; if (this.slots[type]) return this.slots[type].cost; return type === "blast" ? COST.blast * m.blastCostMul : type === "dash" ? COST.dash * m.dashCostMul : COST.awaken; }
+  maxCd(type) { if (this.slots[type]) return this.slots[type].cd; return type === "dash" ? CD.dash * this.stats.dashCdMul : CD[type]; }
   fail(msg) { if (this.isPlayer && this.m) this.m.log(msg); return false; }
 
   tryAttack(chain) {
@@ -66,15 +66,17 @@ class Fighter {
     this.ki -= c; this.cd.awaken = CD.awaken;
     this.act = { type: "awaken", t: 0, dur: .45, done: false }; Sound.play("awaken"); return true;
   }
-  trySkill() {
-    this.buf.race = 0; const sk = this.race.skill; if (!sk || this.cd.race > 0) return false;
+  trySkill() { return this.trySlot("race"); }
+  trySlot(slot) {
+    this.buf[slot] = 0; const sk = this.slots[slot]; if (!sk || this.cd[slot] > 0) return false;
     if (this.ki < sk.cost) return this.fail("Energia insuficiente para " + sk.name + ".");
-    this.ki -= sk.cost; this.cd.race = sk.cd; const k = sk.kind, base = { type: "skill", kind: k, t: 0, hit: false };
+    this.ki -= sk.cost; this.cd[slot] = sk.cd; const k = sk.kind, base = { type: "skill", kind: k, t: 0, hit: false };
     if (this.opp && Math.abs(this.opp.x - this.x) > 1) this.face = sign(this.opp.x - this.x);
     if (k === "pillar") this.act = Object.assign(base, { startup: .28, active: .14, end: .6, fx: false });
     else if (k === "phase") { this.act = Object.assign(base, { vanish: .14, active: .1, end: .5, tp: false }); this.invuln = Math.max(this.invuln, .14); Sound.play("phase"); FX.ring(this.x, this.y - 18, this.palette.auraL, 14, .2, 1, 1); FX.spark(this.x, this.y - 18, this.palette.auraL, 10, 80, .3, 0); }
     else if (k === "beam") { this.act = Object.assign(base, { startup: .45, end: .75, fired: false }); Sound.play("beamCharge"); }
     else if (k === "armor") this.act = Object.assign(base, { end: .4, done: false });
+    else if (k === "cast") { this.act = Object.assign(base, { pid: sk.id, pose: sk.pose || "blast", startup: sk.startup, end: sk.end, fired: false }); if (sk.start) sk.start(this, this.m, this.act); }
     if (this.isPlayer) this.m.log(sk.name + "!");
     return true;
   }
@@ -97,6 +99,8 @@ class Fighter {
     this.comboTimer = Math.max(0, this.comboTimer - dt); if (this.comboTimer <= 0 && !this.act) this.comboStep = 0;
     this.chainTimer -= dt; if (this.chainTimer <= 0) this.chainHits = 0;
     this.hitsTakenT -= dt; if (this.hitsTakenT <= 0) this.hitsTaken = 0;
+    for (const k in this.st) { if (this.st[k] > 0) this.st[k] = Math.max(0, this.st[k] - dt); }
+    if (!(this.st.ward > 0)) this.shield = 0;
     if (this.armorT > 0) { this.armorT = Math.max(0, this.armorT - dt); if (this.armorT <= 0) FX.ring(this.x, this.y - 18, "#efe6c4", 16, .25, 1, 1); }
     if (this.awakenT > 0) { this.awakenT -= dt; if (this.awakenT <= 0) { this.awakenT = 0; FX.ring(this.x, this.y - 18, this.palette.aura, 18, .3, 1, 1); } }
 
@@ -107,6 +111,7 @@ class Fighter {
         const amt = Math.min(lr.rate * dt, lr.pool * s.hp - this.regenUsed); this.hp = Math.min(s.hp, this.hp + amt); this.regenUsed += amt;
         this.regenTick -= dt; if (this.regenTick <= 0) { this.regenTick = .6; FX.text(this.x, this.y - 44, "+", "#7ef0a1", 9); FX.ember(this.x, this.y - 10, "#7ef0a1", 2); }
       }
+      if (this.poison) { this.poison.t -= dt; Combat.dot(this, this.poison.dps * dt, this.poison.src); if (this.poison) { if (Math.random() < dt * 8) FX.ember(this.x, this.y - 18, "#9bff5a", 1); if (this.poison.t <= 0) this.poison = null; } }
       if (this.burn) {
         this.burn.t -= dt; Combat.dot(this, this.burn.dps * dt, this.burn.src);
         if (this.burn) { if (Math.random() < dt * 12) FX.ember(this.x, this.y - 18, "#ff9a3c", 1); if (this.burn.t <= 0) this.burn = null; }
@@ -124,7 +129,9 @@ class Fighter {
     // início de ações
     if (fight && free && this.blockT <= 0) {
       if (this.buf.awaken > 0) this.tryAwaken();
-      else if (this.buf.race > 0) this.trySkill();
+      else if (this.buf.race > 0) this.trySlot("race");
+      else if (this.buf.p1 > 0) this.trySlot("p1");
+      else if (this.buf.p2 > 0) this.trySlot("p2");
       else if (this.buf.dash > 0) this.tryDash();
       else if (this.buf.blast > 0) this.tryBlast();
       else if (this.buf.attack > 0) this.tryAttack(false);
@@ -138,7 +145,7 @@ class Fighter {
     // velocidade horizontal
     let tvx = 0, ctl = false;
     if (!this.ko && this.stun <= 0) {
-      if (!a) { ctl = true; tvx = (this.guarding || this.blockT > 0) ? 0 : this.intent.moveX * s.speed * (this.awakenT > 0 ? AWAKEN.speed : 1) * (this.armorT > 0 ? .85 : 1); }
+      if (!a) { ctl = true; tvx = (this.guarding || this.blockT > 0) ? 0 : this.intent.moveX * s.speed * (this.awakenT > 0 ? AWAKEN.speed : 1) * (this.armorT > 0 ? .85 : 1) * (this.st.slow > 0 ? .55 : 1) * (this.st.haste > 0 ? 1.3 : 1); }
       else if (a.type === "attack") { const ph = a.t < (a.mv.startup + a.mv.active) * a.k; tvx = ph && this.onGround ? this.face * a.mv.lunge : 0; if (!this.onGround) tvx = this.vx; }
       else if (a.type === "dash") { tvx = a.t < a.dur ? a.dir * (a.dir === this.face ? DASH.speed : DASH.backSpeed) : 0; this.vx = tvx; }
       else if (!this.onGround) tvx = this.vx;
@@ -208,6 +215,10 @@ class Fighter {
           m.projectiles.push({ x: this.x + this.face * 14, y: this.y - 26, vx: this.face * 330, owner: this, r: 8, life: 1.6, dmg: 20 * mods.blastDmgMul, color: pal.aura, trail: 0, knock: 130, stun: .35, hitstop: .08, big: true });
           FX.ring(this.x + this.face * 12, this.y - 26, pal.auraL, 22, .3, 1, 2); FX.spark(this.x + this.face * 12, this.y - 26, pal.auraL, 12, 120, .3, 0); FX.shake = Math.max(FX.shake, 3); Sound.play("beam");
         }
+      } else if (a.kind === "cast") {
+        const pw = POWERS[a.pid];
+        if (!a.fired && a.t >= a.startup) { a.fired = true; if (pw.fire) pw.fire(this, m, a); }
+        if (a.fired && pw.tick) pw.tick(this, m, a, dt);
       } else if (a.kind === "armor") {
         if (!a.done && a.t >= .15) { a.done = true; this.armorT = 3.5; FX.ring(this.x, this.y - 18, "#efe6c4", 24, .35, 1, 2); FX.spark(this.x, this.y - 18, "#efe6c4", 14, 90, .4, 40); Sound.play("armor"); }
       }
@@ -259,7 +270,15 @@ const Combat = {
   hit(att, def, h) {
     const m = att.m; if (m.state !== "fight" || def.ko) return false;
     const ds = def.stats, as = att.stats;
-    let dmg = h.damage * as.damage * (att.awakenT > 0 ? AWAKEN.dmg : 1) * ds.takenMul * (def.awakenT > 0 ? AWAKEN.taken : 1) * (def.armorT > 0 ? .6 : 1);
+    if (def.st.counter > 0 && h.type === "melee" && !def.guarding) {                              // contra-ataque: anula o golpe e pune
+      def.st.counter = 0; def.invuln = Math.max(def.invuln, .25); att.act = null; att.stun = Math.max(att.stun, .5); att.guarding = false; att.kx = -(sign(def.x - att.x) || 1) * 120;
+      Sound.play("parry"); FX.burst(def.x, def.y - 22, "#ffe08a", 8); FX.ring(def.x, def.y - 22, "#ffe08a", 20, .3, 1, 1); FX.text(def.x, def.y - 50, "CONTRA!", "#ffe08a", 8);
+      Combat.dot(att, 9 * ds.damage, def); m.hitstopT = Math.max(m.hitstopT, .1); return true;
+    }
+    let dmg = h.damage * as.damage * (att.awakenT > 0 ? AWAKEN.dmg : 1) * ds.takenMul * (def.awakenT > 0 ? AWAKEN.taken : 1) * (def.armorT > 0 ? .6 : 1)
+      * (att.st.rage > 0 ? 1.25 : 1) * (att.st.weak > 0 ? .75 : 1) * (def.st.rage > 0 ? 1.15 : 1);
+    if (h.type === "melee" && as.mods.crit && Math.random() < as.mods.crit.p) { dmg *= as.mods.crit.mul; FX.text(def.x, def.y - 58, "CRÍTICO!", "#fff27a", 7); FX.ring(def.x, def.y - 22, "#fff27a", 16, .22, 1, 1); }
+    if (def.shield > 0) { const ab = Math.min(def.shield, dmg); def.shield -= ab; dmg -= ab; FX.text(def.x, def.y - 56, "ABSORVIDO", "#8fd0ff", 6); if (def.shield <= 0) def.st.ward = 0; }
     if (h.type === "melee") dmg *= Math.max(.55, 1 - .07 * def.hitsTaken);                  // anti combo infinito
     const dir = h.dir || sign(def.x - h.fromX) || att.face;
     const front = (sign(h.fromX - def.x) || def.face) === def.face;
@@ -291,6 +310,10 @@ const Combat = {
       if (arm) { FX.text(def.x, def.y - 52, "ARMADURA", "#efe6c4", 6); }
       else if (h.launch > 0) { def.vy = -h.launch; def.onGround = false; def.wake = true; }
       else if (!def.onGround) def.vy = Math.min(def.vy, -30);
+      if (h.on) Powers.applyOn(att, def, h.on, dmg);
+      if (h.type === "melee") { if (as.mods.chill) Powers.give(def, "slow", as.mods.chill); if (as.mods.lifesteal) Powers.heal(att, dmg * as.mods.lifesteal); }
+      if (att.st.vamp > 0) Powers.heal(att, dmg * .3);
+      if (h.type === "melee" && h.step === 3 && as.mods.venom) { def.poison = { t: as.mods.venom.dur, dps: as.mods.venom.dps * as.damage, src: att }; }
       att.chainHits++; att.chainTimer = 1.1; att.ki = Math.min(as.ki, att.ki + (h.type === "melee" ? as.mods.kiOnHit : 1)); def.ki = Math.min(ds.ki, def.ki + 2);
       if (h.type === "melee" && h.step === 3 && as.mods.burn) { def.burn = { t: as.mods.burn.dur, dps: as.mods.burn.dps * as.damage, src: att }; FX.ember(def.x, def.y - 20, "#ff9a3c", 6); }
       const big = h.step === 3 || h.type === "blast"; Sound.play(big ? "hitH" : "hit");
@@ -322,10 +345,10 @@ const Combat = {
     const L = m.projectiles;
     for (let i = 0; i < L.length; i++) {
       const p = L[i]; if (p.dead) continue;
-      p.x += p.vx * dt; p.life -= dt; p.trail -= dt;
+      p.x += p.vx * dt; p.y += (p.vy || 0) * dt; p.life -= dt; p.trail -= dt;
       if (p.trail <= 0) { p.trail = .035; FX.spark(p.x - sign(p.vx) * 3, p.y + rnd(-2, 2), p.color, 1, 14, .22, 0); }
       for (let j = i + 1; j < L.length; j++) {                                                  // rajadas se anulam
-        const q = L[j]; if (q.dead || q.owner === p.owner) continue;
+        const q = L[j]; if (q.dead || q.owner === p.owner || p.ghost || q.ghost) continue;
         if (Math.abs(p.x - q.x) < p.r + q.r + 2 && Math.abs(p.y - q.y) < p.r + q.r + 2) {
           p.dead = q.dead = true; FX.burst((p.x + q.x) / 2, p.y, "#fff", 7); FX.ring((p.x + q.x) / 2, p.y, p.color, 18, .3, 1, 1); FX.spark(p.x, p.y, q.color, 10, 100, .3); FX.shake = Math.max(FX.shake, 2);
         }
@@ -334,10 +357,10 @@ const Combat = {
       const d = p.owner.opp;
       if (!d.ko && d.invuln <= 0 && Math.abs(p.x - d.x) < CFG.BODY_W / 2 + p.r && p.y > d.y - CFG.BODY_H - p.r && p.y < d.y + p.r) {
         p.dead = true;
-        this.hit(p.owner, d, { type: "blast", damage: p.dmg, knock: p.knock || 75, stun: p.stun || .26, launch: 0, hitstop: p.hitstop || .045, fromX: p.x - sign(p.vx) * 2, dir: sign(p.vx), y: p.y, step: 0, shake: p.big ? 5 : 2 });
+        this.hit(p.owner, d, { type: "blast", damage: p.dmg, knock: p.knock || 75, stun: p.stun || .26, launch: 0, hitstop: p.hitstop || .045, fromX: p.x - sign(p.vx) * 2, dir: sign(p.vx), y: p.y, step: 0, shake: p.big ? 5 : 2, on: p.on });
         FX.ring(p.x, p.y, p.color, 14, .22, 1, 1);
       }
-      if (p.life <= 0 || p.x < -10 || p.x > CFG.W + 10) p.dead = true;
+      if (p.life <= 0 || p.x < -10 || p.x > CFG.W + 10 || p.y > CFG.GROUND + 12) p.dead = true;
     }
     m.projectiles = L.filter(p => !p.dead);
   }
@@ -347,7 +370,10 @@ const Combat = {
 const AI = {
   PROFILE: {
     ignar: { lo: 12, hi: 20, blast: .12, dash: .3, awaken: .6 }, vortice: { lo: 14, hi: 24, blast: .15, dash: .6, awaken: .5 },
-    luminar: { lo: 70, hi: 115, blast: .75, dash: .15, awaken: .5 }, mutante: { lo: 12, hi: 20, blast: .1, dash: .15, awaken: .55 }
+    luminar: { lo: 70, hi: 115, blast: .75, dash: .15, awaken: .5 }, mutante: { lo: 12, hi: 20, blast: .1, dash: .15, awaken: .55 },
+    glacial: { lo: 14, hi: 24, blast: .2, dash: .2, awaken: .55 }, vibora: { lo: 12, hi: 20, blast: .1, dash: .5, awaken: .5 }, trovao: { lo: 12, hi: 20, blast: .15, dash: .4, awaken: .55 },
+    petreo: { lo: 12, hi: 20, blast: .05, dash: .1, awaken: .6 }, zefiro: { lo: 50, hi: 90, blast: .45, dash: .5, awaken: .5 }, sanguis: { lo: 12, hi: 20, blast: .1, dash: .3, awaken: .55 },
+    astral: { lo: 55, hi: 100, blast: .55, dash: .2, awaken: .5 }, draconico: { lo: 14, hi: 24, blast: .15, dash: .2, awaken: .55 }
   },
   make(tier) {
     if (tier === true) tier = .8; else if (tier === false || tier == null) tier = .3; const hard = tier >= .6;
@@ -387,15 +413,17 @@ const AI = {
     if (ai.decide <= 0) {
       ai.decide = rnd(.16, .38) / (ai.hard ? 1.3 : 1); const r = Math.random();
       if (cornered) {                                                                           // sair do canto: pular por cima, atacar ou defender
-        if (f.race.skill.kind === "phase" && f.cd.race <= 0 && f.ki >= f.race.skill.cost && r < .3) f.press("race");
+        if (f.slots.race.kind === "phase" && f.cd.race <= 0 && f.ki >= f.slots.race.cost && r < .3) f.press("race");
         else if (r < .4 && f.onGround) { f.press("jump"); ai.crossT = .6; it.moveX = dir; } else if (r < .7) f.press("attack"); else ai.guardT = .5;
         return;
       }
       if (f.awakenT <= 0 && f.cd.awaken <= 0 && f.ki >= f.cost("awaken") + 8 && (f.hp < f.stats.hp * .8 || o.hp < o.stats.hp * .6) && r < pr.awaken * .5) { f.press("awaken"); return; }
-      const sk = f.race.skill;
-      if (sk && f.cd.race <= 0 && f.ki >= sk.cost + 6 && Math.random() < .5 && f.onGround) {
-        const k = sk.kind, ok = k === "pillar" ? d < 46 : k === "phase" ? d > 30 && d < 130 : k === "beam" ? d > 60 : (d < 44 && (f.hp < f.stats.hp * .75 || !!o.act));
-        if (ok) { f.press("race"); return; }
+      for (const slot of ["race", "p1", "p2"]) {
+        const sk = f.slots[slot];
+        if (sk && f.cd[slot] <= 0 && f.ki >= sk.cost + 6 && Math.random() < .5 && f.onGround) {
+          const k = sk.kind, ok = k === "cast" ? Powers.aiOK(f, o, d, sk) : k === "pillar" ? d < 46 : k === "phase" ? d > 30 && d < 130 : k === "beam" ? d > 60 : (d < 44 && (f.hp < f.stats.hp * .75 || !!o.act));
+          if (ok) { f.press(slot); return; }
+        }
       }
       if (d > 40 && f.cd.blast <= 0 && f.ki >= f.cost("blast") + 8 && Math.random() < pr.blast) { f.press("blast"); return; }
       if (d > 40 && d < 120 && f.cd.dash <= 0 && f.ki >= f.cost("dash") + 6 && Math.random() < pr.dash * .5) { it.moveX = dir; f.press("dash"); return; }
@@ -413,12 +441,12 @@ class Match {
     this.profile = profile; this.tourney = tourney || null; this.character = character; this.hard = hard;
     this.state = "intro"; this.introT = 0; this.koT = 0; this.timeLeft = CFG.ROUND_TIME; this.hitstopT = 0; this.projectiles = []; this.result = null; this.reward = null; this.tick = 0; this.timeUp = false; this.fightBannerShown = false;
     const pst = StatBuilder.build(character.raceKey, character.clanKey, profile.level, profile.upgrades); this.arena = Shop.resolveArena(profile);
-    this.player = new Fighter({ id: 0, name: character.name, isPlayer: true, raceKey: character.raceKey, clanKey: character.clanKey, stats: pst, look: { outfit: character.outfit, hair: character.hair, aura: character.aura, body: character.body, accessory: Shop.hasAcc(profile, character.accessory) ? character.accessory : "none" }, x: 95, face: 1 });
+    this.player = new Fighter({ id: 0, name: character.name, isPlayer: true, raceKey: character.raceKey, clanKey: character.clanKey, stats: pst, look: { outfit: character.outfit, hair: character.hair, aura: character.aura, body: character.body, accessory: Shop.hasAcc(profile, character.accessory) ? character.accessory : "none" }, powers: character.powers, x: 95, face: 1 });
     const te = tourney ? tourney.enemy : null;
     const rk = Object.keys(RACES), er = te ? te.raceKey :  rk[Math.floor(Math.random() * rk.length)], ck = Object.keys(CLANS), ec = te ? te.clanKey : ck[Math.floor(Math.random() * ck.length)];
     const rr = RACES[er], pick = list => { const l = list.filter(c => c.toLowerCase() !== character.outfit.toLowerCase()); return l[Math.floor(Math.random() * l.length)]; };
     const elv = te ? te.level : clamp(profile.level + (hard ? 1 : 0), 1, CFG.MAX_LEVEL);
-    this.enemy = new Fighter({ id: 1, name: te ? te.name : (hard ? "Elite " : "") + ENEMY_NAMES[Math.floor(Math.random() * ENEMY_NAMES.length)], isPlayer: false, raceKey: er, clanKey: ec, stats: StatBuilder.build(er, ec, elv), look: { outfit: pick(SWATCH.outfit), hair: pick(SWATCH.hair), aura: rr.defaults.aura, body: BODY.random() }, x: 225, face: -1 });
+    this.enemy = new Fighter({ id: 1, name: te ? te.name : (hard ? "Elite " : "") + ENEMY_NAMES[Math.floor(Math.random() * ENEMY_NAMES.length)], isPlayer: false, raceKey: er, clanKey: ec, stats: StatBuilder.build(er, ec, elv), look: { outfit: pick(SWATCH.outfit), hair: pick(SWATCH.hair), aura: rr.defaults.aura, body: BODY.random() }, powers: Powers.random(te ? Math.min(2, 1 + (te.tier >= .6 ? 1 : 0)) : hard ? 2 : 1), x: 225, face: -1 });
     this.enemy.ai = AI.make(te ? te.tier : hard ? .8 : .3);
     this.enemyLevel = elv;
     for (const f of [this.player, this.enemy]) { f.m = this; }
@@ -428,7 +456,7 @@ class Match {
   knockout(loser, winner) {
     if (this.state !== "fight") return;
     this.state = "ko"; this.koT = 0; this.projectiles.length = 0;
-    loser.ko = true; loser.koT = 0; loser.act = null; loser.armorT = 0; loser.hidden = false; Sound.play("ko"); loser.guarding = false; loser.burn = null; loser.stun = 9;
+    loser.ko = true; loser.koT = 0; loser.act = null; loser.armorT = 0; loser.hidden = false; Sound.play("ko"); loser.guarding = false; loser.burn = null; loser.poison = null; loser.st = {}; loser.shield = 0; loser.stun = 9;
     const dir = sign(loser.x - winner.x) || winner.face; loser.kx = dir * 120; loser.vy = -90; loser.onGround = false;
     winner.victory = true; this.hitstopT = Math.max(this.hitstopT, .14); FX.shake = 6; FX.flash = .8; FX.flashColor = "#ffffff";
     FX.burst(loser.x, loser.y - 22, "#fff", 12); FX.ring(loser.x, loser.y - 22, "#fff", 40, .5, 1, 2);

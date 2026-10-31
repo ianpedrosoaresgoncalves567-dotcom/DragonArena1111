@@ -5,7 +5,7 @@
  *  e desenhamos o estado recebido (NetView), reproduzindo os efeitos
  *  (partículas e sons) que o servidor registrou.
  * ===================================================================== */
-const NET_VERSION = "1";
+const NET_VERSION = "2";
 const FX_REPLAY = { spark: 1, ember: 1, dust: 1, ring: 1, burst: 1, crescent: 1, text: 1, pillar: 1 };
 
 /* "Partida" visual: mesmos campos que Renderer/HUD esperam de Match, preenchidos por snapshots */
@@ -15,7 +15,7 @@ class NetView {
     this.tourney = null; this.projectiles = []; this.hitstopT = 0; this.koT = 0; this.tick = 0; this.hard = false; this.result = null; this.got = false; this.names = msg.names; this.ranks = msg.ranks; this.ratings = msg.ratings;
     this.fighters = msg.chars.map((c, i) => new Fighter({
       id: i, name: msg.names[i], isPlayer: true, raceKey: c.raceKey, clanKey: c.clanKey, stats: StatBuilder.build(c.raceKey, c.clanKey, msg.level),
-      look: { outfit: c.outfit, hair: c.hair, aura: c.aura, accessory: c.accessory, body: c.body }, x: i ? 225 : 95, face: i ? -1 : 1
+      look: { outfit: c.outfit, hair: c.hair, aura: c.aura, accessory: c.accessory, body: c.body }, powers: c.powers, x: i ? 225 : 95, face: i ? -1 : 1
     }));
     this.player = this.fighters[msg.slot]; this.enemy = this.fighters[1 - msg.slot];
     for (const f of this.fighters) { f.m = this; f.opp = f === this.player ? this.enemy : this.player; f._tx = f.x; f._ty = f.y; }
@@ -29,10 +29,10 @@ class NetView {
       if (!this.got || Math.abs(q.x - f._tx) > 50 || Math.abs(q.y - f._ty) > 40) { f.x = q.x; f.y = q.y; }
       f._tx = q.x; f._ty = q.y; f.vx = q.vx; f.vy = q.vy; f.face = q.face; f.onGround = !!q.g; f.hp = q.hp; f.ki = q.ki; f.stun = q.stun; f.invuln = q.inv ? .1 : 0; f.hitFlash = q.hf ? .1 : 0;
       f.guarding = !!q.gd; f.landT = q.lt ? .09 : 0; f.awakenT = q.aw; f.armorT = q.ar; f.hidden = !!q.hid; f.ko = !!q.ko; f.koT = q.kt; f.victory = !!q.vic;
-      f.comboStep = q.cs; f.comboTimer = q.ct; f.chainHits = q.ch; f.chainTimer = q.cht; f.burn = q.burn ? { t: 1 } : null; Object.assign(f.cd, q.cd);
+      f.comboStep = q.cs; f.comboTimer = q.ct; f.chainHits = q.ch; f.chainTimer = q.cht; f.burn = q.burn ? { t: 1 } : null; f.poison = q.po ? { t: 1 } : null; f.shield = q.sh || 0; f.st = q.st || {}; Object.assign(f.cd, q.cd);
       if (q.act) { const a = q.act; if (a.type === "attack") a.mv = a.air ? AIR_MOVE : MOVES[(a.step || 1) - 1]; f.act = a; } else f.act = null;
     }
-    this.projectiles = s.p.map(p => ({ x: p.x, y: p.y, vx: p.vx, r: p.r, color: p.c }));
+    this.projectiles = s.p.map(p => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy || 0, r: p.r, color: p.c }));
     this.got = true;
     if (s.e) for (const e of s.e) this.replay(e);
     if (this.prevState === "intro" && this.state === "fight") UI.banner("LUTE!", "", 600);
@@ -52,7 +52,7 @@ class NetView {
       f.trailT -= dt; const a = f.act;
       if (f.trailT <= 0 && !f.ko && ((a && a.type === "dash" && a.t < a.dur) || f.awakenT > 0 && Math.abs(f.vx) > f.stats.speed * .8)) { f.trailT = .05; FX.ghost(f, Sprites.poseFor(f), f.palette.aura); }
     }
-    for (const p of this.projectiles) p.x += p.vx * dt;
+    for (const p of this.projectiles) { p.x += p.vx * dt; p.y += p.vy * dt; }
     if (this.state === "fight") this.timeLeft = Math.max(0, this.timeLeft - dt);
     FX.update(dt);
   }
@@ -74,6 +74,7 @@ const Online = {
     $("onRegister").addEventListener("click", () => this.submitAuth("register"));
     $("onPass").addEventListener("keydown", e => { if (e.key === "Enter") this.submitAuth("login"); });
     $("onQueue").addEventListener("click", () => this.queue());
+    $("onBot").addEventListener("click", () => { $("onCancel").click(); $("startBtn").click(); });
     $("onCancel").addEventListener("click", () => this.send({ t: "unqueue" }));
     $("onLogout").addEventListener("click", () => this.logout());
     $("onRefresh").addEventListener("click", () => this.send({ t: "lb" }));
@@ -86,10 +87,10 @@ const Online = {
   connect(manual) {
     if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
     if (!this.url) { this.msg("Informe o endereço do servidor (ex.: wss://seu-jogo.onrender.com)."); return; }
-    this.wantConn = true; this.status = "connecting"; this.render();
+    this.wantConn = true; this.status = "connecting"; this.connAt = this.connAt || performance.now(); clearTimeout(this.wakeT); this.wakeT = setTimeout(() => this.render(), 5000); this.render();
     let ws; try { ws = new WebSocket(this.url); } catch (e) { this.msg("Endereço inválido."); this.status = "idle"; this.render(); return; }
     this.ws = ws;
-    ws.onopen = () => { this.retry = 0; this.status = "connected"; if (this.token) this.send({ t: "resume", token: this.token, v: NET_VERSION }); this.render(); this.pingTimer(); };
+    ws.onopen = () => { this.retry = 0; this.connAt = 0; this.status = "connected"; if (this.token) this.send({ t: "resume", token: this.token, v: NET_VERSION }); this.render(); this.pingTimer(); };
     ws.onmessage = ev => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } this.onMsg(m); };
     ws.onclose = () => {
       if (this.ws !== ws) return; this.ws = null; clearInterval(this.pingT); this.me = this.me; this.status = "offline";
@@ -99,7 +100,7 @@ const Online = {
     };
     ws.onerror = () => { };
   },
-  disconnect() { this.wantConn = false; clearTimeout(this.retryT); if (this.ws) { try { this.ws.close(); } catch (e) { } } },
+  disconnect() { this.wantConn = false; this.connAt = 0; clearTimeout(this.retryT); if (this.ws) { try { this.ws.close(); } catch (e) { } } },
   send(o) { if (this.ws && this.ws.readyState === 1) { try { this.ws.send(JSON.stringify(o)); return true; } catch (e) { } } return false; },
   pingTimer() { clearInterval(this.pingT); this.pingT = setInterval(() => this.send({ t: "ping", c: performance.now() }), 4000); this.send({ t: "ping", c: performance.now() }); },
   msg(t, bad) { const el = $("onMsg"); if (el) { el.textContent = t || ""; el.style.color = bad === false ? "#9fe8b0" : "#ffb4c0"; } },
@@ -187,7 +188,7 @@ const Online = {
   render() {
     const on = this.ws && this.ws.readyState === 1, me = this.me, st = this.status;
     const sEl = $("onStatus");
-    sEl.textContent = on ? "🟢 Conectado" + (this.pingMs ? " · " + this.pingMs + " ms" : "") + (this.serverStats && this.serverStats.online != null ? " · " + this.serverStats.online + " online" : "") : st === "connecting" ? "🟡 Conectando…" : this.wantConn ? "🟠 Reconectando…" : "⚪ Desconectado";
+    sEl.textContent = on ? "🟢 Conectado" + (this.pingMs ? " · " + this.pingMs + " ms" : "") + (this.serverStats && this.serverStats.online != null ? " · " + this.serverStats.online + " online" : "") : st === "connecting" ? "🟡 Conectando…" + (this.connAt && performance.now() - this.connAt > 5000 ? " o servidor gratuito estava dormindo e está acordando (pode levar até 1 minuto)" : "") : this.wantConn ? "🟠 Reconectando…" : "⚪ Desconectado";
     $("onConnect").textContent = on ? "Reconectar" : "Conectar";
     $("onAuth").classList.toggle("hidden", !on || !!me); $("onHome").classList.toggle("hidden", !me);
     if (me) {
@@ -200,7 +201,9 @@ const Online = {
       if (!(me.history || []).length) { const li = document.createElement("li"); li.textContent = "Nenhuma partida ainda."; h.appendChild(li); }
     }
     const q = st === "queued"; $("onQueue").classList.toggle("hidden", q || st === "match"); $("onCancel").classList.toggle("hidden", !q);
-    $("onQueueInfo").textContent = q ? "Procurando rival de pontuação próxima… " + Math.floor((performance.now() - this.queuedAt) / 1000) + " s (a faixa de busca aumenta com o tempo)" : "";
+    const qs = q ? Math.floor((performance.now() - this.queuedAt) / 1000) : 0, ss = this.serverStats;
+    $("onQueueInfo").textContent = q ? "Procurando rival de pontuação próxima… " + qs + " s (a faixa de busca aumenta com o tempo)" + (ss && ss.online != null ? " · " + ss.online + " online" : "") + (qs >= 20 ? " — poucos jogadores agora? Que tal treinar contra o computador enquanto espera." : "") : "";
+    $("onBot").classList.toggle("hidden", !(q && qs >= 20));
     $("onQueue").disabled = !on || !me;
   },
   renderLb(list) {

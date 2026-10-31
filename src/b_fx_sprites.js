@@ -3,7 +3,7 @@
 const Input = {
   CODES: {
     left: ["KeyA", "ArrowLeft"], right: ["KeyD", "ArrowRight"], up: ["KeyW", "ArrowUp"], guard: ["KeyS", "ArrowDown"],
-    attack: ["KeyJ"], blast: ["KeyK"], dash: ["KeyL"], awaken: ["KeyU", "KeyI"], race: ["KeyH"]
+    attack: ["KeyJ"], blast: ["KeyK"], dash: ["KeyL"], awaken: ["KeyU", "KeyI"], race: ["KeyH"], p1: ["Digit1", "Semicolon"], p2: ["Digit2", "Quote"]
   },
   held: new Set(), touch: { left: false, right: false, guard: false }, tapDir: 0, tapUntil: 0, codeToAction: {},
   init() {
@@ -21,7 +21,7 @@ const Input = {
       else if (e.code === "Escape" || e.code === "KeyP") Game.togglePause();
       else if (e.code === "KeyR") Game.rematch();
       else if (act === "up") Game.press("jump");
-      else if (act === "attack" || act === "blast" || act === "dash" || act === "awaken" || act === "race") Game.press(act);
+      else if (act === "attack" || act === "blast" || act === "dash" || act === "awaken" || act === "race" || act === "p1" || act === "p2") Game.press(act);
     });
     window.addEventListener("keyup", e => { this.held.delete(e.code); });
     window.addEventListener("blur", () => this.reset());
@@ -168,6 +168,12 @@ const Sprites = (() => {
       if (a.kind === "phase") return a.t < a.vanish ? POSES.dash : mixP(POSES.finS, IDLE, ease(clamp((a.t - a.vanish) / (a.end - a.vanish), 0, 1)));
       if (a.kind === "beam") return a.t < a.startup ? mixP(POSES.blastW, POSES.blastS, ease(clamp(a.t / a.startup, 0, 1))) : mixP(POSES.blastS, IDLE, ease(clamp((a.t - a.startup) / (a.end - a.startup), 0, 1)));
       if (a.kind === "armor") return mixP(POSES.awakenW, POSES.awakenS, ease(clamp(a.t / a.end, 0, 1)));
+      if (a.kind === "cast") {
+        const pr = clamp(a.t / a.startup, 0, 1), rec = ease(clamp((a.t - a.startup) / Math.max(.05, a.end - a.startup), 0, 1));
+        if (a.pose === "slam") return a.t < a.startup ? mixP(POSES.finW, POSES.finS, ease(pr)) : mixP(POSES.finS, IDLE, rec);
+        if (a.pose === "buff") return a.t < a.startup ? mixP(POSES.awakenW, POSES.awakenS, ease(pr)) : mixP(POSES.awakenS, IDLE, rec);
+        return a.t < a.startup ? mixP(POSES.blastW, POSES.blastS, ease(pr)) : mixP(POSES.blastS, IDLE, rec);
+      }
     }
     if (f.guarding) return POSES.guard;
     if (!f.onGround) return f.vy < 0 ? POSES.jump : POSES.fall;
@@ -216,6 +222,8 @@ const Sprites = (() => {
       const { hx, hy, t, pal, sp } = c; for (let i = 0; i < 4; i++) b(hx - 8 - i * 2.2 * (1 + sp * .5), hy - 7 + i * 1.6 + Math.sin(t * 6 + i) * 1.2, 3, 3, i % 2 ? pal.hairD : pal.hair);
       fr(hx - 5, hy - 10, 11, 3, pal.hair); fr(hx - 5, hy - 8, 3, 6, pal.hair); fr(hx + 1, hy - 9, 5, 1, pal.hairL); fr(hx - 6, hy - 7, 2, 2, pal.accent);
     },
+    spikes(b, fr, c) { const { hx, hy, pal } = c; fr(hx - 5, hy - 10, 11, 3, pal.hair); fr(hx - 5, hy - 8, 2, 5, pal.hair); for (let k = 0; k < 4; k++) { const h = [3, 6, 5, 3][k]; fr(hx - 5 + k * 3, hy - 10 - h, 2, h, k % 2 ? pal.hairD : pal.hair); } },
+    horns(b, fr, c) { const { hx, hy, pal } = c; fr(hx - 5, hy - 10, 10, 2, pal.hairD); fr(hx - 4, hy - 13, 2, 3, pal.hair); fr(hx - 4, hy - 16, 1, 3, pal.hair); fr(hx + 2, hy - 13, 2, 3, pal.hair); fr(hx + 3, hy - 16, 1, 3, pal.hair); fr(hx - 5, hy - 8, 2, 3, pal.hairD); },
     bald(b, fr, c) { const { hx, hy, pal } = c; fr(hx - 1, hy - 8, 3, 1, pal.skinL); },
     crest(b, fr, c) { // crista óssea e testa saliente
       const { hx, hy, pal } = c;

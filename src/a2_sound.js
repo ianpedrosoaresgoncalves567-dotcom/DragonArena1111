@@ -66,6 +66,7 @@ const Sound = {
         case "fight": this.tone(440, .12, "square", .16); this.tone(660, .12, "square", .16, 0, .1); this.tone(880, .25, "square", .18, 0, .2); break;
         case "win": [523, 659, 784, 1046].forEach((f, i) => this.tone(f, .22, "square", .16, 0, i * .13)); this.tone(1046, .6, "triangle", .2, 0, .55); break;
         case "lose": [392, 349, 311, 262].forEach((f, i) => this.tone(f, .3, "triangle", .2, 0, i * .22)); break;
+        case "heal": [523, 659, 784].forEach((f, i) => this.tone(f, .2, "sine", .14, 0, i * .08)); break;
         case "champ": [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => this.tone(f, .2, "square", .16, 0, i * .12)); this.tone(1568, .9, "triangle", .2, 0, .9); break;
       }
     } catch (e) { }

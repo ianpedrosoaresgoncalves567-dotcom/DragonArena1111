@@ -5,14 +5,14 @@
  *  créditos ou melhorias da loja: ranqueada usa atributos normalizados.
  * ===================================================================== */
 const RANKED_LEVEL = 10;
-const PRESS_OK = { attack: 1, blast: 1, dash: 1, awaken: 1, race: 1, jump: 1 };
+const PRESS_OK = { attack: 1, blast: 1, dash: 1, awaken: 1, race: 1, p1: 1, p2: 1, jump: 1 };
 
 function makePvP(chars, arena) {
   const m = Object.create(Match.prototype);
   m.profile = null; m.tourney = null; m.hard = false; m.character = chars[0]; m.arena = arena;
   m.fighters = chars.map((c, i) => new Fighter({
     id: i, name: c.name, isPlayer: true, raceKey: c.raceKey, clanKey: c.clanKey, stats: StatBuilder.build(c.raceKey, c.clanKey, RANKED_LEVEL),
-    look: { outfit: c.outfit, hair: c.hair, aura: c.aura, accessory: c.accessory, body: c.body }, x: i ? 225 : 95, face: i ? -1 : 1
+    look: { outfit: c.outfit, hair: c.hair, aura: c.aura, accessory: c.accessory, body: c.body }, powers: c.powers, x: i ? 225 : 95, face: i ? -1 : 1
   }));
   m.player = m.fighters[0]; m.enemy = m.fighters[1];
   for (const f of m.fighters) f.m = m;
@@ -65,14 +65,14 @@ function fighterSnap(f) {
   return {
     x: r1(f.x), y: r1(f.y), vx: Math.round(f.vx), vy: Math.round(f.vy), face: f.face, g: f.onGround ? 1 : 0, hp: r1(f.hp), ki: r1(f.ki), stun: r1(f.stun * 100) / 100, inv: f.invuln > 0 ? 1 : 0,
     hf: f.hitFlash > 0 ? 1 : 0, gd: f.guarding ? 1 : 0, lt: f.landT > 0 ? 1 : 0, aw: r1(f.awakenT), ar: r1(f.armorT), hid: f.hidden ? 1 : 0, ko: f.ko ? 1 : 0, kt: r1(f.koT), vic: f.victory ? 1 : 0,
-    cs: f.comboStep, ct: r1(f.comboTimer), ch: f.chainHits, cht: r1(f.chainTimer), burn: f.burn ? 1 : 0,
-    cd: { blast: r1(f.cd.blast), dash: r1(f.cd.dash), awaken: r1(f.cd.awaken), race: r1(f.cd.race) }, act
+    cs: f.comboStep, ct: r1(f.comboTimer), ch: f.chainHits, cht: r1(f.chainTimer), burn: f.burn ? 1 : 0, po: f.poison ? 1 : 0, sh: r1(f.shield), st: Object.keys(f.st).reduce((o, k) => { if (f.st[k] > 0) o[k] = r1(f.st[k]); return o; }, {}),
+    cd: { blast: r1(f.cd.blast), dash: r1(f.cd.dash), awaken: r1(f.cd.awaken), race: r1(f.cd.race), p1: r1(f.cd.p1), p2: r1(f.cd.p2) }, act
   };
 }
 function pvpSnap(m, withEvents) {
   return {
     t: "snap", n: m.tick, s: m.state, tl: r1(m.timeLeft), f: [fighterSnap(m.fighters[0]), fighterSnap(m.fighters[1])],
-    p: m.projectiles.map(p => ({ x: r1(p.x), y: r1(p.y), vx: Math.round(p.vx), r: p.r, c: p.color, o: p.owner.id })),
+    p: m.projectiles.map(p => ({ x: r1(p.x), y: r1(p.y), vx: Math.round(p.vx), vy: Math.round(p.vy || 0), r: p.r, c: p.color, o: p.owner.id })),
     e: withEvents ? NetRec.take() : undefined
   };
 }
